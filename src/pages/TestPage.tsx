@@ -462,7 +462,7 @@ export default function TestPage() {
 
     const fetchQuestions = async () => {
       try {
-        const q = query(collection(db, 'questions'), where('active', '==', true), orderBy('order', 'asc'));
+        const q = query(collection(db, 'questions'), orderBy('order', 'asc'));
         let querySnapshot;
         try {
           querySnapshot = await getDocs(q);
@@ -470,13 +470,16 @@ export default function TestPage() {
           handleFirestoreError(error, OperationType.LIST, 'questions');
           return;
         }
-        let fetchedQuestions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+        let fetchedQuestions = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as Question))
+          .filter(q => q.active);
         
-        // If no questions in DB or less than 30, seed them
-        const needsReseed = fetchedQuestions.length < 30 || fetchedQuestions.some(q => !q.textAr);
+        // Only admins should handle seeding/updating
+        const isAdminUser = profile?.role === 'admin';
+        const needsReseed = isAdminUser && (fetchedQuestions.length < 30 || fetchedQuestions.some(q => !q.textAr));
         
         if (needsReseed) {
-          console.log("Seeding questions...");
+          console.log("Admin detected: Seeding/Updating questions...");
           for (const seedQ of SEED_QUESTIONS) {
             const existing = fetchedQuestions.find(q => q.order === seedQ.order);
             if (!existing) {
@@ -486,14 +489,12 @@ export default function TestPage() {
                 handleFirestoreError(error, OperationType.CREATE, 'questions');
                 return;
               }
-            } else {
-              // Update existing with Arabic text if missing or incomplete
+            } else if (!existing.textAr) {
+              // Update existing with Arabic text if missing
               try {
                 await updateDoc(doc(db, 'questions', existing.id), {
-                  text: seedQ.text,
                   textAr: seedQ.textAr,
-                  options: seedQ.options,
-                  active: true
+                  options: seedQ.options
                 });
               } catch (error) {
                 handleFirestoreError(error, OperationType.UPDATE, `questions/${existing.id}`);
@@ -501,7 +502,7 @@ export default function TestPage() {
               }
             }
           }
-          // Re-fetch
+          // Re-fetch after seeding
           let updatedSnapshot;
           try {
             updatedSnapshot = await getDocs(q);
@@ -509,7 +510,9 @@ export default function TestPage() {
             handleFirestoreError(error, OperationType.LIST, 'questions');
             return;
           }
-          fetchedQuestions = updatedSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Question));
+          fetchedQuestions = updatedSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Question))
+            .filter(q => q.active);
         }
         
         setQuestions(fetchedQuestions);
