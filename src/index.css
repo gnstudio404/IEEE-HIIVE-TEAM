@@ -1,20 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-headline: "Manrope", sans-serif;
+  --font-body: "Inter", sans-serif;
+  
+  --color-primary: #00666e;
+  --color-primary-container: #00818b;
+  --color-secondary: #356381;
+  --color-tertiary: #944600;
+  --color-background: #f6fafa;
+  --color-surface: #f6fafa;
+  --color-on-surface: #181c1d;
+  --color-on-surface-variant: #3e494a;
+  --color-outline-variant: #bdc9ca;
+  --color-surface-container-low: #f0f4f5;
+  --color-surface-container-high: #e5e9e9;
+  --color-surface-container-highest: #dfe3e4;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-primary: #ffffff;
+}
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-  }
-
   body {
-    @apply bg-slate-50 text-slate-900 transition-colors duration-300;
+    @apply bg-background font-body text-on-surface transition-colors duration-300;
   }
 
   .dark body {
