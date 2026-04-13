@@ -186,7 +186,7 @@ export default function AdminApplicants() {
                   onClick={() => setFilter(f)}
                   className={cn(
                     "px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                    filter === f ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-primary"
+                    filter === f ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-primary"
                   )}
                 >
                   {t(`admin.${f}`)}

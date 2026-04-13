@@ -207,25 +207,25 @@ export default function AdminDashboard() {
           title={t('admin.totalApplicants')} 
           value={stats.totalApplicants} 
           icon="group" 
-          color="text-primary bg-primary/10" 
+          color="text-primary bg-primary/10 dark:bg-primary/20" 
         />
         <StatCard 
           title={t('admin.completedTests')} 
           value={stats.completedTests} 
           icon="check_circle" 
-          color="text-emerald-600 bg-emerald-50" 
+          color="text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-400" 
         />
         <StatCard 
           title={t('admin.pendingUsers')} 
           value={stats.pendingUsers} 
           icon="timer" 
-          color="text-amber-600 bg-amber-50" 
+          color="text-amber-600 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-400" 
         />
         <StatCard 
           title={t('admin.totalTeams')} 
           value={stats.totalTeams} 
           icon="diversity_3" 
-          color="text-secondary bg-secondary/10" 
+          color="text-secondary bg-secondary/10 dark:bg-secondary/20" 
         />
       </div>
     </div>

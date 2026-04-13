@@ -23,6 +23,21 @@
 }
 
 @layer base {
+  .dark {
+    --color-background: #0a0c0c;
+    --color-surface: #0a0c0c;
+    --color-on-surface: #e1e3e3;
+    --color-on-surface-variant: #bec8ca;
+    --color-outline-variant: #3f494a;
+    --color-surface-container-lowest: #191c1c;
+    --color-surface-container-low: #1d2020;
+    --color-surface-container-high: #272a2a;
+    --color-surface-container-highest: #323535;
+    --color-primary: #80d4db;
+    --color-primary-container: #004c52;
+    --color-on-primary: #00373b;
+  }
+
   body {
     @apply bg-surface font-body text-on-surface transition-colors duration-300;
   }
@@ -36,9 +51,17 @@
   .bg-primary-gradient {
     background: linear-gradient(135deg, #004c52 0%, #00666e 100%);
   }
+
+  .dark .bg-primary-gradient {
+    background: linear-gradient(135deg, #00373b 0%, #004c52 100%);
+  }
   
   .hive-shadow {
     box-shadow: 0px 12px 32px rgba(0, 76, 82, 0.06);
+  }
+
+  .dark .hive-shadow {
+    box-shadow: 0px 12px 32px rgba(0, 0, 0, 0.3);
   }
 
   .clip-path-polygon {
