@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ApplicantHome from './pages/ApplicantHome';
 import ApplicantTeams from './pages/ApplicantTeams';
+import Profile from './pages/Profile';
 import TestPage from './pages/TestPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminQuestions from './pages/AdminQuestions';
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route index element={isAdmin ? <Navigate to="/admin" replace /> : <ApplicantHome />} />
         <Route path="test" element={<TestPage />} />
         <Route path="teams" element={<ApplicantTeams />} />
+        <Route path="profile" element={<Profile />} />
         
         {/* Admin Routes */}
         <Route path="admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />

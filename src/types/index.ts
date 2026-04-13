@@ -7,6 +7,8 @@ export interface UserProfile {
   photoURL?: string;
   phone?: string;
   department?: string;
+  bio?: string;
+  country?: string;
   role: UserRole;
   completedTest: boolean;
   assignedTeamId?: string | null;

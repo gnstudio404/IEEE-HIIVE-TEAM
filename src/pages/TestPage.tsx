@@ -455,6 +455,13 @@ export default function TestPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // Redirect to profile if bio or country is missing
+    if (profile && (!profile.bio || !profile.country)) {
+      toast.error(language === 'ar' ? 'يرجى إكمال ملفك الشخصي أولاً' : 'Please complete your profile first');
+      navigate('/profile');
+      return;
+    }
+
     if (profile?.completedTest) {
       navigate('/');
       return;

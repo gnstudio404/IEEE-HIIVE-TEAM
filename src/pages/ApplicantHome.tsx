@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Clock, Users, ArrowRight, ClipboardList, Trophy, Star, HelpCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
@@ -11,10 +11,17 @@ import { cn } from '../lib/utils';
 export default function ApplicantHome() {
   const { profile } = useAuth();
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [team, setTeam] = useState<Team | null>(null);
   const [score, setScore] = useState<UserScore | null>(null);
 
   useEffect(() => {
+    // Redirect to profile if bio or country is missing (first time setup)
+    if (profile && (!profile.bio || !profile.country)) {
+      navigate('/profile');
+      return;
+    }
+
     if (profile?.assignedTeamId) {
       const fetchTeam = async () => {
         try {

@@ -4,12 +4,12 @@ import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firest
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
-import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function AdminApplicants() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user } = useAuth();
   const [applicants, setApplicants] = useState<UserProfile[]>([]);
   const [scores, setScores] = useState<Record<string, UserScore>>({});
@@ -18,6 +18,7 @@ export default function AdminApplicants() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -213,8 +214,8 @@ export default function AdminApplicants() {
                 return (
                   <tr key={u.uid} className="hover:bg-surface-container/30 transition-colors">
                     <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-surface-container overflow-hidden border border-outline-variant/20 flex items-center justify-center">
+                      <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setSelectedUser(u)}>
+                        <div className="w-10 h-10 rounded-full bg-surface-container overflow-hidden border border-outline-variant/20 flex items-center justify-center group-hover:border-primary transition-colors">
                           {u.photoURL ? (
                             <img 
                               className="w-full h-full object-cover" 
@@ -227,7 +228,7 @@ export default function AdminApplicants() {
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-primary">{u.name}</p>
+                          <p className="font-bold text-primary group-hover:underline">{u.name}</p>
                           <p className="text-xs text-on-surface-variant">{u.email}</p>
                         </div>
                       </div>
@@ -287,6 +288,92 @@ export default function AdminApplicants() {
           )}
         </div>
       </section>
+
+      {/* User Details Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface-container-lowest w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="relative h-32 bg-primary">
+              <button 
+                onClick={() => setSelectedUser(null)}
+                className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            
+            <div className="px-8 pb-8">
+              <div className="relative -mt-16 mb-6">
+                <div className="w-32 h-32 rounded-3xl overflow-hidden border-4 border-surface-container-lowest shadow-xl bg-surface-container">
+                  <img 
+                    src={selectedUser.photoURL || "https://picsum.photos/seed/user/200/200"} 
+                    alt={selectedUser.name} 
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-3xl font-black text-primary tracking-tighter">{selectedUser.name}</h3>
+                  <p className="text-on-surface-variant font-medium">{selectedUser.email}</p>
+                </div>
+                <div className="px-4 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-black uppercase tracking-widest">
+                  {selectedUser.role}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 mt-8">
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
+                    {t('register.phone')}
+                  </p>
+                  <p className="font-bold text-primary flex items-center gap-2">
+                    <Phone size={14} />
+                    {selectedUser.phone || 'N/A'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
+                    {t('register.department')}
+                  </p>
+                  <p className="font-bold text-primary flex items-center gap-2">
+                    <Building size={14} />
+                    {selectedUser.department || 'N/A'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
+                    {language === 'ar' ? 'الدولة' : 'Country'}
+                  </p>
+                  <p className="font-bold text-primary flex items-center gap-2">
+                    <Globe size={14} />
+                    {selectedUser.country || 'N/A'}
+                  </p>
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
+                    {language === 'ar' ? 'نبذة شخصية' : 'Bio'}
+                  </p>
+                  <p className="text-on-surface-variant leading-relaxed bg-surface-container-low p-4 rounded-2xl italic">
+                    {selectedUser.bio || (language === 'ar' ? 'لا توجد نبذة شخصية متاحة.' : 'No bio available.')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-outline-variant/10 flex justify-end">
+                <button 
+                  onClick={() => setSelectedUser(null)}
+                  className="px-8 py-3 bg-primary text-white rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+                >
+                  {language === 'ar' ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
