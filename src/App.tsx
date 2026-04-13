@@ -27,13 +27,17 @@ const ProtectedRoute = ({ children, adminOnly = false }: { children: React.React
 };
 
 function AppRoutes() {
+  const { isAdmin, user, loading } = useAuth();
+
+  if (loading) return null;
+
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<ApplicantHome />} />
+        <Route index element={isAdmin ? <Navigate to="/admin" replace /> : <ApplicantHome />} />
         <Route path="test" element={<TestPage />} />
         
         {/* Admin Routes */}

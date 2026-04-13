@@ -81,6 +81,7 @@ export default function Register() {
             uid: user.uid,
             name: user.displayName || 'Google User',
             email: user.email,
+            photoURL: user.photoURL || user.providerData[0]?.photoURL || null,
             role: role,
             completedTest: false,
             createdAt: new Date().toISOString(),
@@ -88,6 +89,15 @@ export default function Register() {
         } catch (error) {
           handleFirestoreError(error, OperationType.WRITE, path);
           return;
+        }
+      } else {
+        // Sync photoURL for existing users
+        try {
+          await setDoc(doc(db, 'users', user.uid), {
+            photoURL: user.photoURL || user.providerData[0]?.photoURL || null,
+          }, { merge: true });
+        } catch (e) {
+          console.error("Error syncing photoURL:", e);
         }
       }
       
@@ -121,7 +131,7 @@ export default function Register() {
           
           {/* Brand Content */}
           <div className="relative z-10">
-            <Logo className="h-12" />
+            <Logo className="h-12" variant="withText" />
           </div>
           
           <div className="relative z-10 max-w-md">
@@ -155,7 +165,7 @@ export default function Register() {
         <div className="md:col-span-6 flex flex-col justify-center p-8 md:p-12 lg:p-16 bg-surface-container-lowest">
           {/* Mobile Brand Header */}
           <div className="md:hidden flex items-center gap-2 mb-8">
-            <Logo className="h-8" />
+            <Logo className="h-12 w-auto" variant="withText" />
           </div>
           
           <div className="mb-8">
@@ -163,7 +173,7 @@ export default function Register() {
               {t('register.title')}
             </h1>
             <p className="text-on-surface-variant">
-              {language === 'ar' ? 'ابدأ رحلتك مع HIIVE اليوم.' : 'Start your journey with HIIVE today.'}
+              {language === 'ar' ? 'ابدأ رحلتك اليوم.' : 'Start your journey today.'}
             </p>
           </div>
 

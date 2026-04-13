@@ -2,19 +2,22 @@ import React from 'react';
 
 interface LogoProps {
   className?: string;
+  variant?: 'default' | 'withText';
 }
 
 /**
  * Logo Component
  * This component now uses a local file path.
- * Make sure to upload "logo with.png" to the /public folder.
+ * Make sure to upload "logo.png" and "logo with.png" to the /public folder.
  */
-export const Logo: React.FC<LogoProps> = ({ className = "h-12 w-auto" }) => {
+export const Logo: React.FC<LogoProps> = ({ className = "h-12 w-auto", variant = 'default' }) => {
+  const src = variant === 'withText' ? '/logo with.png' : '/logo.png';
+  
   return (
     <img 
-      src="/logo with.png" 
+      src={src} 
       alt="HIIVE Logo" 
-      className={`object-contain ${className}`}
+      className={`object-contain relative z-[100] ${className}`}
       referrerPolicy="no-referrer"
     />
   );

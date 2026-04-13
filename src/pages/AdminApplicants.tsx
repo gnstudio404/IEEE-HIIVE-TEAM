@@ -5,8 +5,11 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
 import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function AdminApplicants() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [applicants, setApplicants] = useState<UserProfile[]>([]);
   const [scores, setScores] = useState<Record<string, UserScore>>({});
@@ -158,147 +161,115 @@ export default function AdminApplicants() {
   });
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">User Management</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Review user profiles, manage roles, and team assignments.</p>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-          />
-        </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          <Filter className="text-slate-400 w-5 h-5 mr-2" />
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-full md:w-auto">
-            {(['all', 'completed', 'pending'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded-md text-sm font-bold capitalize transition-all ${
-                  filter === f ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+    <div className="space-y-12">
+      <section id="users">
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <p className="text-primary font-bold tracking-tight text-sm mb-1 uppercase">{t('admin.identityManagement')}</p>
+            <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.applicants')}</h2>
+          </div>
+          <div className="flex gap-4">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-sm">search</span>
+              <input 
+                className="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-1 focus:ring-primary w-64 transition-all" 
+                placeholder={t('admin.search')} 
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex bg-surface-container-low p-1 rounded-xl">
+              {(['all', 'completed', 'pending'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={cn(
+                    "px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
+                    filter === f ? "bg-white text-primary shadow-sm" : "text-on-surface-variant hover:text-primary"
+                  )}
+                >
+                  {t(`admin.${f}`)}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0px_12px_32px_rgba(0,76,82,0.04)] border border-outline-variant/10">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">User</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Traits</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Assigned Team</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-right">Actions</th>
+            <thead className="bg-surface-container-low">
+              <tr>
+                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.name')}</th>
+                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.role')}</th>
+                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.status')}</th>
+                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.team')}</th>
+                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 text-right">{t('admin.actions')}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-outline-variant/10">
               {filteredApplicants.map((u) => {
-                const score = scores[u.uid];
                 const team = teams.find(t => t.id === u.assignedTeamId);
-
                 return (
-                  <tr key={u.uid} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
-                    <td className="px-6 py-4">
+                  <tr key={u.uid} className="hover:bg-surface-container/30 transition-colors">
+                    <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                          u.role === 'admin' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
-                        }`}>
-                          {u.name.charAt(0)}
+                        <div className="w-10 h-10 rounded-full bg-surface-container overflow-hidden border border-outline-variant/20 flex items-center justify-center">
+                          {u.photoURL ? (
+                            <img 
+                              className="w-full h-full object-cover" 
+                              src={u.photoURL} 
+                              alt={u.name}
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <span className="material-symbols-outlined text-on-surface-variant/40">person</span>
+                          )}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-bold text-slate-900 dark:text-white">{u.name}</p>
-                            {u.role === 'admin' && (
-                              <span className="text-[10px] font-bold bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded uppercase">Admin</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{u.email}</p>
+                          <p className="font-bold text-primary">{u.name}</p>
+                          <p className="text-xs text-on-surface-variant">{u.email}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      {u.completedTest ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-bold border border-green-100 dark:border-green-900/30">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-xs font-bold border border-amber-100 dark:border-amber-900/30">
-                          <Clock className="w-3.5 h-3.5" />
-                          Pending
-                        </span>
-                      )}
+                    <td className="px-8 py-5">
+                      <span className={cn(
+                        "font-bold text-[10px] uppercase tracking-tighter px-2 py-0.5 rounded",
+                        u.role === 'admin' ? "bg-primary-container/20 text-primary-container" : "bg-surface-container-high text-on-surface-variant"
+                      )}>
+                        {u.role === 'admin' ? t('admin.leadArchitect') : t('admin.contributor')}
+                      </span>
                     </td>
-                    <td className="px-6 py-4">
-                      {score ? (
-                        <div className="flex flex-col gap-1">
-                          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                            Primary: {score.primaryTrait}
-                          </span>
-                          <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                            Secondary: {score.secondaryTrait}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-slate-400 dark:text-slate-500 italic">No score</span>
-                      )}
+                    <td className="px-8 py-5">
+                      <div className={cn(
+                        "flex items-center gap-2 text-xs font-medium",
+                        u.completedTest ? "text-emerald-600" : "text-amber-600"
+                      )}>
+                        <span className={cn("w-2 h-2 rounded-full", u.completedTest ? "bg-emerald-600" : "bg-amber-600")}></span>
+                        {u.completedTest ? t('admin.completed') : t('admin.pending')}
+                      </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-8 py-5">
                       <select
                         value={u.assignedTeamId || ''}
                         onChange={(e) => handleReassign(u.uid, e.target.value || null)}
-                        className="text-sm bg-transparent border-none focus:ring-0 font-semibold text-indigo-600 dark:text-indigo-400 cursor-pointer hover:underline"
+                        className="text-xs font-bold text-primary bg-transparent border-none focus:ring-0 cursor-pointer hover:underline p-0"
                       >
-                        <option value="" className="bg-white dark:bg-slate-800">Unassigned</option>
+                        <option value="">{t('admin.noTeam')}</option>
                         {teams.map(t => (
-                          <option key={t.id} value={t.id} className="bg-white dark:bg-slate-800">{t.name}</option>
+                          <option key={t.id} value={t.id}>{t.name}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {deletingId === u.uid ? (
-                          <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 p-1 rounded-lg border border-red-100 dark:border-red-900/30">
-                            <span className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase px-1">Confirm?</span>
-                            <button 
-                              onClick={() => handleDeleteUser(u.uid)}
-                              className="p-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                              title="Confirm Delete"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button 
-                              onClick={() => setDeletingId(null)}
-                              className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                              title="Cancel"
-                            >
-                              <MoreVertical className="w-3.5 h-3.5 rotate-90" />
-                            </button>
-                          </div>
+                          <button onClick={() => handleDeleteUser(u.uid)} className="text-error hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                          </button>
                         ) : (
-                          <button 
-                            onClick={() => setDeletingId(u.uid)}
-                            disabled={u.uid === user?.uid}
-                            className="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg transition-colors disabled:opacity-0 disabled:cursor-default"
-                            title={u.uid === user?.uid ? "" : "Delete User"}
-                          >
-                            <Trash2 className="w-5 h-5" />
+                          <button onClick={() => setDeletingId(u.uid)} disabled={u.uid === user?.uid} className="text-on-surface-variant hover:text-error transition-colors disabled:opacity-0">
+                            <span className="material-symbols-outlined text-[20px]">delete</span>
                           </button>
                         )}
                       </div>
@@ -308,14 +279,14 @@ export default function AdminApplicants() {
               })}
             </tbody>
           </table>
+          {filteredApplicants.length === 0 && (
+            <div className="p-12 text-center">
+              <span className="material-symbols-outlined text-5xl text-outline-variant/30 mb-4">person_search</span>
+              <p className="text-on-surface-variant font-medium">{t('admin.noUsersFound')}</p>
+            </div>
+          )}
         </div>
-        {filteredApplicants.length === 0 && (
-          <div className="p-12 text-center">
-            <User className="w-12 h-12 text-slate-200 dark:text-slate-800 mx-auto mb-4" />
-            <p className="text-slate-500 dark:text-slate-400 font-medium">No applicants found matching your criteria.</p>
-          </div>
-        )}
-      </div>
+      </section>
     </div>
   );
 }

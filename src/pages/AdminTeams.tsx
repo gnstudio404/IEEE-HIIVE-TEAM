@@ -4,13 +4,29 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Team, UserProfile, UserScore } from '../types';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Save, X, Users, Wand2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { cn } from '../lib/utils';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function AdminTeams() {
+  const { t } = useLanguage();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    type: 'danger' | 'primary';
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'primary'
+  });
 
   const [formData, setFormData] = useState<Partial<Team>>({
     name: '',
@@ -75,19 +91,27 @@ export default function AdminTeams() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure? This will not unassign users automatically.")) {
+    setConfirmModal({
+      show: true,
+      title: t('admin.deleteTeam'),
+      message: 'Are you sure? This will not unassign users automatically.',
+      type: 'danger',
+      onConfirm: () => executeDelete(id)
+    });
+  };
+
+  const executeDelete = async (id: string) => {
+    try {
       try {
-        try {
-          await deleteDoc(doc(db, 'teams', id));
-        } catch (error) {
-          handleFirestoreError(error, OperationType.DELETE, `teams/${id}`);
-          return;
-        }
-        toast.success("Team deleted");
-        fetchTeams();
+        await deleteDoc(doc(db, 'teams', id));
       } catch (error) {
-        toast.error("Failed to delete team");
+        handleFirestoreError(error, OperationType.DELETE, `teams/${id}`);
+        return;
       }
+      toast.success("Team deleted");
+      fetchTeams();
+    } catch (error) {
+      toast.error("Failed to delete team");
     }
   };
 
@@ -215,162 +239,199 @@ export default function AdminTeams() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Teams Management</h1>
-          <p className="text-slate-500 mt-1">Manage teams and run the assignment algorithm.</p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={handleAutoAssign}
-            disabled={assigning}
-            className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-6 py-3 rounded-xl font-bold hover:bg-indigo-100 transition-all border border-indigo-100 disabled:opacity-50"
-          >
-            {assigning ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
-            Auto Assign Teams
-          </button>
-          <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            Create Team
-          </button>
-        </div>
-      </div>
-
-      {(isAdding || editingId) && (
-        <div className="bg-white rounded-2xl p-8 border border-indigo-200 shadow-lg shadow-indigo-50 space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-xl font-bold text-slate-900">{editingId ? 'Edit Team' : 'New Team'}</h3>
-            <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="text-slate-400 hover:text-slate-600">
-              <X className="w-6 h-6" />
-            </button>
+    <div className="space-y-12">
+      <section id="teams">
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <p className="text-primary font-bold tracking-tight text-sm mb-1 uppercase">{t('admin.structuralOrg')}</p>
+            <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.teams')}</h2>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-              <label className="block text-sm font-bold text-slate-700 mb-1">Team Name</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-                placeholder="Team Alpha..."
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Min Size</label>
-              <input
-                type="number"
-                value={formData.minSize}
-                onChange={(e) => setFormData({ ...formData, minSize: parseInt(e.target.value) || 0 })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Max Size</label>
-              <input
-                type="number"
-                value={formData.maxSize}
-                onChange={(e) => setFormData({ ...formData, maxSize: parseInt(e.target.value) || 0 })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3">
+          <div className="flex gap-4">
             <button
-              onClick={() => { setIsAdding(false); setEditingId(null); }}
-              className="px-6 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all"
+              onClick={handleAutoAssign}
+              disabled={assigning}
+              className="bg-surface-container-low text-primary px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-surface-container-high transition-all"
             >
-              Cancel
+              <span className={cn("material-symbols-outlined text-sm", assigning && "animate-spin")}>
+                {assigning ? 'sync' : 'auto_fix'}
+              </span>
+              {t('admin.autoAssign')}
             </button>
             <button
-              onClick={handleSave}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-8 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all"
+              onClick={() => setIsAdding(true)}
+              className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
             >
-              <Save className="w-4 h-4" />
-              Save Team
+              <span className="material-symbols-outlined text-sm">add</span>
+              {t('admin.addTeam')}
             </button>
+          </div>
+        </div>
+
+        {(isAdding || editingId) && (
+          <div className="bg-surface-container-lowest rounded-xl p-8 border border-primary/20 shadow-xl mb-12">
+            <div className="flex justify-between items-center mb-8">
+              <h3 className="text-2xl font-black text-primary tracking-tighter">{editingId ? t('admin.editTeam') : t('admin.addTeam')}</h3>
+              <button onClick={() => { setIsAdding(false); setEditingId(null); }} className="text-on-surface-variant hover:text-primary transition-colors">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.teamName')}</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-surface-container-low border-none rounded-xl text-sm font-bold focus:ring-1 focus:ring-primary"
+                  placeholder="Team Alpha..."
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.minSize')}</label>
+                <input
+                  type="number"
+                  value={formData.minSize}
+                  onChange={(e) => setFormData({ ...formData, minSize: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 bg-surface-container-low border-none rounded-xl text-sm font-bold focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.maxSize')}</label>
+                <input
+                  type="number"
+                  value={formData.maxSize}
+                  onChange={(e) => setFormData({ ...formData, maxSize: parseInt(e.target.value) || 0 })}
+                  className="w-full px-4 py-2 bg-surface-container-low border-none rounded-xl text-sm font-bold focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-4 mt-10">
+              <button
+                onClick={() => { setIsAdding(false); setEditingId(null); }}
+                className="px-8 py-2.5 rounded-xl font-bold text-on-surface-variant hover:bg-surface-container-low transition-all"
+              >
+                {t('admin.cancel')}
+              </button>
+              <button
+                onClick={handleSave}
+                className="bg-primary text-white px-10 py-2.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+              >
+                {t('admin.save')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {teams.map((team) => (
+            <div key={team.id} className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-all">
+                <span className="material-symbols-outlined text-8xl text-primary">diversity_3</span>
+              </div>
+              
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h4 className="text-2xl font-black text-primary tracking-tighter">{team.name}</h4>
+                  <p className="text-[10px] text-on-surface-variant/50 font-bold uppercase tracking-widest mt-1">{t('admin.id')}: {team.id.slice(0, 8)}</p>
+                </div>
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={() => { setEditingId(team.id); setFormData(team); }}
+                    className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDelete(team.id)}
+                    className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 rounded-lg transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-widest">{t('admin.activeMembers')}</p>
+                    <p className="text-4xl font-black text-primary tracking-tighter">{team.memberCount}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-on-surface-variant/60 font-bold uppercase tracking-widest">{t('admin.threshold')}</p>
+                    <p className="text-sm font-black text-primary">{team.minSize} - {team.maxSize}</p>
+                  </div>
+                </div>
+
+                <div className="h-1.5 w-full bg-surface-container-low rounded-full overflow-hidden">
+                  <div 
+                    className={cn(
+                      "h-full transition-all duration-500",
+                      team.memberCount < team.minSize ? "bg-amber-500" : 
+                      team.memberCount > team.maxSize ? "bg-error" : "bg-emerald-500"
+                    )}
+                    style={{ width: `${Math.min((team.memberCount / team.maxSize) * 100, 100)}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {team.memberCount < team.minSize ? (
+                    <div className="flex items-center gap-2 text-amber-600 text-[10px] font-black uppercase tracking-widest">
+                      <span className="material-symbols-outlined text-sm">warning</span>
+                      {t('admin.underCapacity')}
+                    </div>
+                  ) : team.memberCount >= team.maxSize ? (
+                    <div className="flex items-center gap-2 text-error text-[10px] font-black uppercase tracking-widest">
+                      <span className="material-symbols-outlined text-sm">block</span>
+                      {t('admin.maxReached')}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      {t('admin.optimalBalance')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {confirmModal.show && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+          <div className="bg-surface-container-lowest p-8 rounded-3xl max-w-md w-full shadow-2xl border border-outline-variant/10 transform animate-in zoom-in-95 duration-200">
+            <div className={cn(
+              "w-16 h-16 rounded-2xl flex items-center justify-center mb-6",
+              confirmModal.type === 'danger' ? "bg-error/10 text-error" : "bg-primary/10 text-primary"
+            )}>
+              <span className="material-symbols-outlined text-3xl">
+                {confirmModal.type === 'danger' ? 'warning' : 'help'}
+              </span>
+            </div>
+            <h3 className="text-2xl font-black text-primary tracking-tighter mb-2">{confirmModal.title}</h3>
+            <p className="text-on-surface-variant leading-relaxed mb-8">{confirmModal.message}</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setConfirmModal({ ...confirmModal, show: false })}
+                className="px-6 py-2.5 rounded-xl font-bold text-on-surface-variant hover:bg-surface-container-low transition-all"
+              >
+                {t('admin.cancel')}
+              </button>
+              <button 
+                onClick={() => { confirmModal.onConfirm(); setConfirmModal({ ...confirmModal, show: false }); }}
+                className={cn(
+                  "px-8 py-2.5 rounded-xl font-bold text-white transition-all shadow-lg",
+                  confirmModal.type === 'danger' ? "bg-error shadow-error/20 hover:opacity-90" : "bg-primary shadow-primary/20 hover:opacity-90"
+                )}
+              >
+                {confirmModal.type === 'danger' ? t('admin.delete') : t('admin.confirm')}
+              </button>
+            </div>
           </div>
         </div>
       )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {teams.map((team) => (
-          <div key={team.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all group relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-all">
-              <Users className="w-16 h-16" />
-            </div>
-            
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h4 className="text-xl font-bold text-slate-900">{team.name}</h4>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Team ID: {team.id.slice(0, 8)}</p>
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                <button
-                  onClick={() => { setEditingId(team.id); setFormData(team); }}
-                  className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(team.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-xs text-slate-500 font-medium">Members</p>
-                  <p className="text-2xl font-bold text-slate-900">{team.memberCount}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-500 font-medium">Capacity</p>
-                  <p className="text-sm font-bold text-slate-700">{team.minSize} - {team.maxSize}</p>
-                </div>
-              </div>
-
-              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full transition-all duration-500",
-                    team.memberCount < team.minSize ? "bg-amber-400" : 
-                    team.memberCount > team.maxSize ? "bg-red-500" : "bg-green-500"
-                  )}
-                  style={{ width: `${Math.min((team.memberCount / team.maxSize) * 100, 100)}%` }}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                {team.memberCount < team.minSize ? (
-                  <div className="flex items-center gap-1.5 text-amber-600 text-xs font-bold">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    Below minimum size
-                  </div>
-                ) : team.memberCount >= team.maxSize ? (
-                  <div className="flex items-center gap-1.5 text-red-600 text-xs font-bold">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    Team is full
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-green-600 text-xs font-bold">
-                    <CheckCircleIcon className="w-3.5 h-3.5" />
-                    Balanced size
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -393,8 +454,4 @@ function CheckCircleIcon(props: any) {
       <polyline points="22 4 12 14.01 9 11.01" />
     </svg>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
 }

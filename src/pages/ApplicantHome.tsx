@@ -6,10 +6,11 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Team, UserScore } from '../types';
+import { cn } from '../lib/utils';
 
 export default function ApplicantHome() {
   const { profile } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [team, setTeam] = useState<Team | null>(null);
   const [score, setScore] = useState<UserScore | null>(null);
 
@@ -44,137 +45,243 @@ export default function ApplicantHome() {
   }, [profile?.assignedTeamId, profile?.completedTest, profile?.uid]);
 
   return (
-    <div className="space-y-8">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('home.welcome')}, {profile?.name}!</h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2">{t('home.trackProgress')}</p>
+    <div className="space-y-12">
+      {/* Welcome Section */}
+      <section className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <span className="text-secondary font-bold tracking-widest text-xs uppercase mb-2 block">
+            {language === 'ar' ? 'لوحة تحكم المهندس' : 'Engineer Dashboard'}
+          </span>
+          <h2 className="text-4xl font-bold text-primary tracking-tight mb-2">
+            {language === 'ar' ? `مرحباً، ${profile?.name}` : `Welcome, ${profile?.name}`}
+          </h2>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "inline-block w-2 h-2 rounded-full animate-pulse",
+              profile?.completedTest ? "bg-primary" : "bg-secondary-container"
+            )}></span>
+            <p className="text-on-surface-variant font-medium">
+              {language === 'ar' ? 'الحالة:' : 'Status:'} <span className="text-primary">
+                {profile?.completedTest 
+                  ? (language === 'ar' ? 'تم الاختبار' : 'Test Completed') 
+                  : (language === 'ar' ? 'بانتظار الاختبار' : 'Test Pending')}
+              </span>
+            </p>
           </div>
-          <div className="flex items-center gap-3 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-full border border-indigo-100 dark:border-indigo-900/30">
-            <div className={profile?.completedTest ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}>
-              {profile?.completedTest ? <CheckCircle2 className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
-            </div>
-            <span className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">
-              {profile?.completedTest ? t('home.testCompleted') : t('home.testPending')}
+        </div>
+        <div className="hidden md:flex gap-4">
+          <div className="px-4 py-2 rounded-full bg-surface-container-low flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-sm">calendar_today</span>
+            <span className="text-xs font-bold text-on-surface-variant uppercase">
+              {new Date().toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {score && (
-        <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
-          <div className="flex items-center gap-3 mb-6">
-            <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{t('home.profileTitle')}</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-6 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30">
-              <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-2">{t('home.primaryTrait')}</p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white capitalize">{score.primaryTrait}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t('home.primaryTraitDesc')}</p>
-            </div>
-            <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700">
-              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">{t('home.secondaryTrait')}</p>
-              <p className="text-2xl font-bold text-slate-900 dark:text-white capitalize">{score.secondaryTrait}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{t('home.secondaryTraitDesc')}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
+      {/* Main Progress Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Step 1: Registration */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 dark:opacity-5">
-            <ClipboardList className="w-16 h-16 dark:text-white" />
+        {/* Step 1: Registration (Completed) */}
+        <div className="bg-surface-container-lowest rounded-xl p-8 hive-shadow relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4">
+            <span className="material-symbols-outlined text-primary text-3xl opacity-20">assignment_turned_in</span>
           </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center font-bold">1</div>
-            <h3 className="font-bold text-slate-900 dark:text-white">{t('home.step1')}</h3>
+          <div className="relative z-10">
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
+              <span className="material-symbols-outlined text-primary fill-1">check_circle</span>
+            </div>
+            <h3 className="text-xl font-bold text-primary mb-2">
+              {language === 'ar' ? 'التسجيل' : 'Registration'}
+            </h3>
+            <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
+              {language === 'ar' ? 'التحقق من الملف الشخصي ورفع المستندات.' : 'Profile verification and documents upload.'}
+            </p>
+            <div className="flex items-center gap-2 text-primary font-bold text-sm">
+              <span>{language === 'ar' ? 'مكتمل' : 'Completed'}</span>
+            </div>
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">{t('home.step1Desc')}</p>
-          <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-semibold">
-            <CheckCircle2 className="w-4 h-4" />
-            {t('home.completed')}
-          </div>
+          <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
         </div>
 
-        {/* Step 2: MCQ Test */}
-        <div className={profile?.completedTest ? "bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors" : "bg-indigo-600 p-6 rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-none relative overflow-hidden text-white"}>
-          <div className="absolute top-0 right-0 p-4 opacity-10 dark:opacity-5">
-            <HelpCircle className="w-16 h-16 dark:text-white" />
+        {/* Step 2: MCQ Test (Active/Completed) */}
+        <div className={cn(
+          "bg-surface-container-lowest rounded-xl p-8 hive-shadow relative overflow-hidden",
+          !profile?.completedTest && "ring-1 ring-primary/5"
+        )}>
+          <div className="absolute top-0 right-0 p-4">
+            <span className="material-symbols-outlined text-secondary text-3xl opacity-20">quiz</span>
           </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-8 h-8 rounded-full ${profile?.completedTest ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-white/20 text-white'} flex items-center justify-center font-bold`}>2</div>
-            <h3 className="font-bold">{t('home.step2')}</h3>
-          </div>
-          <p className={`text-sm mb-4 ${profile?.completedTest ? 'text-slate-600 dark:text-slate-400' : 'text-indigo-100'}`}>
-            {t('home.step2Desc')}
-          </p>
-          {profile?.completedTest ? (
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-semibold">
-              <CheckCircle2 className="w-4 h-4" />
-              {t('home.completed')}
+          <div className="relative z-10">
+            <div className={cn(
+              "w-10 h-10 rounded-lg flex items-center justify-center mb-6",
+              profile?.completedTest ? "bg-primary/10" : "bg-secondary/10"
+            )}>
+              <span className={cn(
+                "material-symbols-outlined",
+                profile?.completedTest ? "text-primary fill-1" : "text-secondary"
+              )}>
+                {profile?.completedTest ? "check_circle" : "timer"}
+              </span>
             </div>
-          ) : (
-            <Link 
-              to="/test" 
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-50 transition-colors"
-            >
-              {t('home.startTest')}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          )}
+            <h3 className="text-xl font-bold text-primary mb-2">
+              {language === 'ar' ? 'اختبار MCQ' : 'MCQ Test'}
+            </h3>
+            <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
+              {language === 'ar' ? 'التقييم الفني للكفاءة الهندسية.' : 'Technical assessment for engineering proficiency.'}
+            </p>
+            {profile?.completedTest ? (
+              <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                <span>{language === 'ar' ? 'مكتمل' : 'Completed'}</span>
+              </div>
+            ) : (
+              <Link 
+                to="/test" 
+                className="w-full bg-secondary text-white font-bold py-3 px-6 rounded-lg active:scale-[0.98] transition-all hover:brightness-110 flex items-center justify-center gap-2"
+              >
+                {language === 'ar' ? 'ابدأ الاختبار' : 'Start Test'}
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </Link>
+            )}
+          </div>
+          <div className={cn(
+            "absolute bottom-0 left-0 w-full h-1",
+            profile?.completedTest ? "bg-primary" : "bg-secondary-container"
+          )}></div>
         </div>
 
-        {/* Step 3: Team Assignment */}
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden transition-colors">
-          <div className="absolute top-0 right-0 p-4 opacity-10 dark:opacity-5">
-            <Users className="w-16 h-16 dark:text-white" />
+        {/* Step 3: Team Assignment (Waiting/Completed) */}
+        <div className={cn(
+          "rounded-xl p-8 relative overflow-hidden transition-all",
+          profile?.assignedTeamId 
+            ? "bg-surface-container-lowest hive-shadow" 
+            : "bg-surface-container-low opacity-80"
+        )}>
+          <div className="absolute top-0 right-0 p-4">
+            <span className="material-symbols-outlined text-outline text-3xl opacity-20">groups</span>
           </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className={`w-8 h-8 rounded-full ${profile?.assignedTeamId ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'} flex items-center justify-center font-bold`}>3</div>
-            <h3 className="font-bold text-slate-900 dark:text-white">{t('home.step3')}</h3>
+          <div className="relative z-10">
+            <div className={cn(
+              "w-10 h-10 rounded-lg flex items-center justify-center mb-6",
+              profile?.assignedTeamId ? "bg-primary/10" : "bg-surface-container-high"
+            )}>
+              <span className={cn(
+                "material-symbols-outlined",
+                profile?.assignedTeamId ? "text-primary fill-1" : "text-outline"
+              )}>
+                {profile?.assignedTeamId ? "check_circle" : "hourglass_empty"}
+              </span>
+            </div>
+            <h3 className={cn(
+              "text-xl font-bold mb-2",
+              profile?.assignedTeamId ? "text-primary" : "text-on-surface-variant"
+            )}>
+              {language === 'ar' ? 'تعيين الفريق' : 'Team Assignment'}
+            </h3>
+            <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
+              {language === 'ar' ? 'التنسيب داخل خلية هندسية مناسبة.' : 'Placement within appropriate engineering hive.'}
+            </p>
+            {profile?.assignedTeamId ? (
+              <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                <span>{language === 'ar' ? 'مكتمل' : 'Completed'}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-outline font-bold text-sm italic">
+                <span>{language === 'ar' ? 'بانتظار إكمال الاختبار' : 'Waiting for Test Completion'}</span>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">{t('home.step3Desc')}</p>
-          {profile?.assignedTeamId ? (
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm font-semibold">
-              <CheckCircle2 className="w-4 h-4" />
-              {t('home.completed')}
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm font-semibold italic">
-              <Clock className="w-4 h-4" />
-              {t('home.waitingAdmin')}
-            </div>
-          )}
+          {profile?.assignedTeamId && <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>}
         </div>
       </div>
 
-      {team && (
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-8 transition-colors">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center">
-              <Trophy className="text-white w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('home.yourTeam')}: {team.name}</h2>
-              <p className="text-indigo-600 dark:text-indigo-400 font-medium">{t('home.assignedSuccess')}</p>
+      {/* Secondary Layout: Human Impact & Info */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        {/* Impact Section */}
+        <div className="lg:col-span-3 bg-surface-container-lowest rounded-xl p-10 hive-shadow overflow-hidden relative">
+          <div className="relative z-10 max-w-md">
+            <span className="text-primary font-bold tracking-widest text-xs uppercase mb-4 block">
+              {language === 'ar' ? 'التركيز على الاستدامة' : 'Sustainability Focus'}
+            </span>
+            <h3 className="text-3xl font-extrabold text-primary tracking-tight mb-4">
+              {language === 'ar' ? 'التأثير البشري' : 'Human Impact'}
+            </h3>
+            <p className="text-on-surface-variant leading-relaxed mb-8">
+              {language === 'ar' 
+                ? 'تكرس خليتنا الهندسية جهودها لحلول الطاقة النظيفة. نصمم أنظمة تمكن المجتمعات من خلال التكنولوجيا المستدامة والتكامل المعماري الدقيق.'
+                : 'Our engineering hive is dedicated to clean energy solutions. We design systems that empower communities through sustainable technology and precise architectural integration.'}
+            </p>
+            <div className="flex gap-8">
+              <div>
+                <div className="text-2xl font-bold text-primary">12.4 GW</div>
+                <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                  {language === 'ar' ? 'طاقة نظيفة مولدة' : 'Clean Energy Generated'}
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-primary">850k</div>
+                <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                  {language === 'ar' ? 'حياة تأثرت' : 'Lives Impacted'}
+                </div>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">{t('home.teamSize')}</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-white">{team.memberCount} {t('home.members')}</p>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-              <p className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider mb-1">{t('home.capacity')}</p>
-              <p className="text-lg font-semibold text-slate-900 dark:text-white">{team.minSize} - {team.maxSize} {t('home.members')}</p>
+          {/* Artistic Imagery */}
+          <div className="absolute right-0 top-0 h-full w-1/3 hidden md:block">
+            <div className="w-full h-full bg-primary/5 clip-path-polygon">
+              <img 
+                className="w-full h-full object-cover mix-blend-overlay opacity-60" 
+                src="https://picsum.photos/seed/energy/800/800"
+                alt="Energy"
+                referrerPolicy="no-referrer"
+              />
             </div>
           </div>
         </div>
-      )}
+
+        {/* Side Card: Resources */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-primary-gradient rounded-xl p-8 text-white relative overflow-hidden">
+            <h4 className="text-xl font-bold mb-4">
+              {language === 'ar' ? 'إرشادات المهندس' : 'Engineer Guidelines'}
+            </h4>
+            <ul className="space-y-4">
+              <li className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary-fixed text-sm">verified_user</span>
+                <span className="text-sm font-medium opacity-90">Architecture Standards v4.2</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary-fixed text-sm">verified_user</span>
+                <span className="text-sm font-medium opacity-90">Safety Protocols & Ethics</span>
+              </li>
+            </ul>
+            <div className="mt-8">
+              <a className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 group" href="#">
+                {language === 'ar' ? 'تحميل PDF' : 'Download PDF'}
+                <span className="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform">download</span>
+              </a>
+            </div>
+          </div>
+          <div className="bg-surface-container-low rounded-xl p-8">
+            <h4 className="text-primary font-bold mb-4">
+              {language === 'ar' ? 'آخر التحديثات' : 'Latest Updates'}
+            </h4>
+            <div className="space-y-4">
+              <div className="flex gap-3">
+                <div className="w-2 h-2 rounded-full bg-secondary-container mt-1.5 flex-shrink-0"></div>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  {language === 'ar' ? 'بدء مشروع رياح بحري جديد في مجموعة بحر الشمال.' : 'New offshore wind project initiated in the North Sea cluster.'}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  {language === 'ar' ? 'ندوة فنية قادمة حول موازنة الأحمال المدعومة بالذكاء الاصطناعي.' : 'Upcoming technical seminar on AI-driven load balancing.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
