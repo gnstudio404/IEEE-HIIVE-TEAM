@@ -143,7 +143,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col transition-colors duration-300">
       {/* TopAppBar */}
-      <header className="fixed top-0 w-full z-50 bg-surface-container-lowest dark:bg-slate-950/80 backdrop-blur-md shadow-[0px_12px_32px_rgba(0,76,82,0.06)]">
+      <header className="fixed top-0 w-full z-50 bg-surface-container-lowest/80 backdrop-blur-md shadow-[0px_12px_32px_rgba(0,76,82,0.06)]">
         <div className="flex justify-between items-center px-6 py-4 w-full relative max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
             <Logo className="h-12 w-auto" />
@@ -222,7 +222,7 @@ export default function Layout() {
       </main>
 
       {/* BottomNavBar (Mobile Only) */}
-      <nav className="fixed bottom-0 left-0 w-full z-50 bg-surface-container-lowest dark:bg-slate-900 border-t border-surface-container-low shadow-[0_-4px_20px_rgba(0,76,82,0.04)] rounded-t-xl md:hidden">
+      <nav className="fixed bottom-0 left-0 w-full z-50 bg-surface-container-lowest border-t border-surface-container-low shadow-[0_-4px_20px_rgba(0,76,82,0.04)] rounded-t-xl md:hidden">
         <div className="flex justify-around items-center px-4 py-3 pb-safe">
           {navItems.map((item) => (
             <Link

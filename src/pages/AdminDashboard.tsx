@@ -95,7 +95,7 @@ export default function AdminDashboard() {
             <p className="text-primary font-bold tracking-tight text-sm mb-1 uppercase">{t('admin.analytics')}</p>
             <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.systemPerformance')}</h2>
           </div>
-          <button className="bg-primary text-white px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20">
+          <button className="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20">
             <span className="material-symbols-outlined text-sm">download</span>
             {t('admin.export')}
           </button>
@@ -126,7 +126,7 @@ export default function AdminDashboard() {
                     key={i}
                     className={cn(
                       "w-full rounded-t-lg transition-all duration-500",
-                      i === 5 ? "bg-secondary" : "bg-primary-container/20 group-hover:bg-primary-container"
+                      i === 5 ? "bg-secondary" : "bg-primary/10 group-hover:bg-primary/30 dark:bg-primary/20 dark:group-hover:bg-primary/40"
                     )}
                     style={{ height: `${height}%` }}
                   ></div>
@@ -144,12 +144,12 @@ export default function AdminDashboard() {
               <p className="text-xs text-on-surface-variant/60 mt-2">{t('admin.latency')}</p>
             </div>
             
-            <div className="bg-primary text-white rounded-xl p-6 shadow-[0px_12px_32px_rgba(0,76,82,0.1)]">
-              <span className="material-symbols-outlined text-primary-fixed mb-4">workspace_premium</span>
+            <div className="bg-primary text-on-primary rounded-xl p-6 shadow-[0px_12px_32px_rgba(0,76,82,0.1)] dark:bg-surface-container-lowest dark:text-on-surface dark:border dark:border-outline-variant/10">
+              <span className="material-symbols-outlined text-on-primary dark:text-primary mb-4">workspace_premium</span>
               <p className="text-xs font-bold uppercase tracking-wider opacity-80">{t('admin.precision')}</p>
               <p className="text-3xl font-black mt-1">99.4%</p>
-              <div className="w-full bg-white/20 h-1.5 rounded-full mt-4">
-                <div className="bg-primary-fixed w-[99.4%] h-full rounded-full"></div>
+              <div className="w-full bg-on-primary/20 dark:bg-surface-container-high h-1.5 rounded-full mt-4">
+                <div className="bg-on-primary dark:bg-primary w-[99.4%] h-full rounded-full"></div>
               </div>
             </div>
           </div>
@@ -157,43 +157,45 @@ export default function AdminDashboard() {
       </section>
 
       {/* Trait Distribution Chart Section */}
-      <section className="bg-[#0a0e1a] rounded-2xl p-8 border border-white/5 shadow-2xl">
+      <section className="bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/10 shadow-2xl">
         <div className="flex items-center gap-4 mb-8">
           <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
             <BarChart3 className="text-primary w-6 h-6" />
           </div>
-          <h3 className="text-2xl font-bold text-white tracking-tight">{t('admin.traitDist')}</h3>
+          <h3 className="text-2xl font-bold text-primary tracking-tight">{t('admin.traitDist')}</h3>
         </div>
 
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={traitDistribution} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-outline-variant/20" vertical={false} />
               <XAxis 
                 dataKey="name" 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                tick={{ fill: 'currentColor', fontSize: 12 }}
+                className="text-on-surface-variant"
                 dy={10}
               />
               <YAxis 
                 axisLine={false} 
                 tickLine={false} 
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
+                tick={{ fill: 'currentColor', fontSize: 12 }}
+                className="text-on-surface-variant"
               />
               <Tooltip 
-                cursor={{ fill: '#ffffff05' }}
+                cursor={{ fill: 'currentColor', className: 'text-surface-container-high/20' }}
                 contentStyle={{ 
-                  backgroundColor: '#1e293b', 
-                  border: 'none', 
+                  backgroundColor: 'var(--color-surface-container-lowest)', 
+                  border: '1px solid var(--color-outline-variant)', 
                   borderRadius: '12px',
                   boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                 }}
-                itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                itemStyle={{ color: 'var(--color-on-surface)', fontWeight: 'bold' }}
               />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={60}>
                 {traitDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#00666e' : '#008b96'} />
+                  <Cell key={`cell-${index}`} fill="var(--color-primary)" />
                 ))}
               </Bar>
             </BarChart>
