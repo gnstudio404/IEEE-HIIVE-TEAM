@@ -79,7 +79,7 @@ export default function Register() {
         try {
           await setDoc(doc(db, 'users', user.uid), {
             uid: user.uid,
-            name: user.displayName || 'Google User',
+            name: user.displayName || user.email?.split('@')[0] || 'Google User',
             email: user.email,
             photoURL: user.photoURL || user.providerData[0]?.photoURL || null,
             role: role,
@@ -91,13 +91,14 @@ export default function Register() {
           return;
         }
       } else {
-        // Sync photoURL for existing users
+        // Sync name and photoURL for existing users
         try {
           await setDoc(doc(db, 'users', user.uid), {
+            name: user.displayName || user.email?.split('@')[0] || 'Google User',
             photoURL: user.photoURL || user.providerData[0]?.photoURL || null,
           }, { merge: true });
         } catch (e) {
-          console.error("Error syncing photoURL:", e);
+          console.error("Error syncing user data:", e);
         }
       }
       

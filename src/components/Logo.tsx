@@ -1,4 +1,5 @@
 import React from 'react';
+import { LOGO_BASE64, LOGO_WITH_TEXT_BASE64 } from '../constants/logos';
 
 interface LogoProps {
   className?: string;
@@ -6,19 +7,16 @@ interface LogoProps {
 }
 
 /**
- * Logo Component
- * This component now uses a local file path.
- * Make sure to upload "logo.png" and "logo with.png" to the /public folder.
+ * Logo component that uses embedded base64 images to ensure visibility in all environments.
  */
-export const Logo: React.FC<LogoProps> = ({ className = "h-12 w-auto", variant = 'default' }) => {
-  const src = variant === 'withText' ? '/logo-with.png' : '/logo.png';
+export const Logo: React.FC<LogoProps> = ({ className = "h-12", variant = 'default' }) => {
+  const src = variant === 'withText' ? LOGO_WITH_TEXT_BASE64 : LOGO_BASE64;
   
   return (
     <img 
       src={src} 
       alt="HIIVE Logo" 
-      className={`object-contain relative z-[100] ${className}`}
-      referrerPolicy="no-referrer"
+      className={`object-contain w-auto relative z-[100] ${className}`}
     />
   );
 };

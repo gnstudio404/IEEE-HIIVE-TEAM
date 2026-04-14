@@ -16,8 +16,16 @@ export default function ApplicantHome() {
   const [score, setScore] = useState<UserScore | null>(null);
 
   useEffect(() => {
-    // Redirect to profile if bio or country is missing (first time setup)
-    if (profile && (!profile.bio || !profile.country)) {
+    // Redirect to profile if any required field is missing (first time setup)
+    const isProfileComplete = profile && 
+      profile.name && 
+      profile.phone && 
+      profile.department && 
+      profile.bio && 
+      profile.country && 
+      profile.photoURL;
+
+    if (profile && !isProfileComplete) {
       navigate('/profile');
       return;
     }

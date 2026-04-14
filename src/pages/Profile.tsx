@@ -39,8 +39,9 @@ export default function Profile() {
 
     setLoading(true);
     try {
+      const { name, ...updateData } = formData;
       await updateDoc(doc(db, 'users', user.uid), {
-        ...formData,
+        ...updateData,
         updatedAt: new Date().toISOString()
       });
       toast.success(language === 'ar' ? 'تم تحديث الملف الشخصي بنجاح' : 'Profile updated successfully');
@@ -114,6 +115,7 @@ export default function Profile() {
             </h3>
             <input 
               type="text"
+              required
               value={formData.photoURL}
               onChange={(e) => setFormData({ ...formData, photoURL: e.target.value })}
               placeholder="https://example.com/photo.jpg"
@@ -131,18 +133,20 @@ export default function Profile() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-black text-primary uppercase tracking-widest ml-1">
-                  {language === 'ar' ? 'الاسم الكامل' : 'Full Name'}
+                  {language === 'ar' ? 'الاسم الكامل (مرتبط بالحساب)' : 'Full Name (Linked to Account)'}
                 </label>
                 <div className="relative">
                   <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
                   <input 
                     type="text"
-                    required
+                    readOnly
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary transition-all"
+                    className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-0 cursor-not-allowed opacity-70 transition-all"
                   />
                 </div>
+                <p className="text-[10px] text-on-surface-variant/60 mt-1 px-1">
+                  {language === 'ar' ? 'يتم مزامنة الاسم تلقائياً من حسابك ولا يمكن تغييره.' : 'Name is automatically synced from your account and cannot be changed.'}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -153,6 +157,7 @@ export default function Profile() {
                   <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
                   <input 
                     type="tel"
+                    required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary transition-all"
@@ -168,6 +173,7 @@ export default function Profile() {
                   <Globe size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
                   <input 
                     type="text"
+                    required
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                     placeholder={language === 'ar' ? 'مثال: مصر' : 'e.g. Egypt'}
@@ -184,6 +190,7 @@ export default function Profile() {
                   <Building size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" />
                   <input 
                     type="text"
+                    required
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     className="w-full pl-12 pr-4 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary transition-all"
@@ -197,6 +204,7 @@ export default function Profile() {
                 </label>
                 <textarea 
                   rows={4}
+                  required
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                   placeholder={language === 'ar' ? 'أخبرنا المزيد عن خبراتك ومهاراتك...' : 'Tell us more about your experience and skills...'}

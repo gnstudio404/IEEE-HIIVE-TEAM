@@ -455,8 +455,16 @@ export default function TestPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Redirect to profile if bio or country is missing
-    if (profile && (!profile.bio || !profile.country)) {
+    // Redirect to profile if any required field is missing
+    const isProfileComplete = profile && 
+      profile.name && 
+      profile.phone && 
+      profile.department && 
+      profile.bio && 
+      profile.country && 
+      profile.photoURL;
+
+    if (profile && !isProfileComplete) {
       toast.error(language === 'ar' ? 'يرجى إكمال ملفك الشخصي أولاً' : 'Please complete your profile first');
       navigate('/profile');
       return;

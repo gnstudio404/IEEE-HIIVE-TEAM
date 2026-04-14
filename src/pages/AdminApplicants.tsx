@@ -4,9 +4,10 @@ import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firest
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
-import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe } from 'lucide-react';
+import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
+import * as XLSX from 'xlsx';
 
 export default function AdminApplicants() {
   const { t, language } = useLanguage();
@@ -19,6 +20,40 @@ export default function AdminApplicants() {
   const [filter, setFilter] = useState<'all' | 'completed' | 'pending'>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+
+  const downloadExcel = () => {
+    const data = filteredApplicants.map(u => ({
+      [language === 'ar' ? 'الاسم' : 'Name']: u.name,
+      [language === 'ar' ? 'البريد الإلكتروني' : 'Email']: u.email,
+      [language === 'ar' ? 'الهاتف' : 'Phone']: u.phone || 'N/A',
+      [language === 'ar' ? 'القسم' : 'Department']: u.department || 'N/A',
+      [language === 'ar' ? 'الدولة' : 'Country']: u.country || 'N/A',
+      [language === 'ar' ? 'الدور' : 'Role']: u.role,
+      [language === 'ar' ? 'حالة الاختبار' : 'Test Status']: u.completedTest ? (language === 'ar' ? 'مكتمل' : 'Completed') : (language === 'ar' ? 'معلق' : 'Pending'),
+      [language === 'ar' ? 'الفريق' : 'Team']: teams.find(t => t.id === u.assignedTeamId)?.name || (language === 'ar' ? 'بدون فريق' : 'No Team'),
+      [language === 'ar' ? 'تاريخ التسجيل' : 'Created At']: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    
+    // Set column widths
+    const colWidths = [
+      { wch: 25 }, // Name
+      { wch: 30 }, // Email
+      { wch: 15 }, // Phone
+      { wch: 20 }, // Department
+      { wch: 15 }, // Country
+      { wch: 12 }, // Role
+      { wch: 15 }, // Test Status
+      { wch: 20 }, // Team
+      { wch: 15 }, // Created At
+    ];
+    worksheet['!cols'] = colWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Applicants");
+    XLSX.writeFile(workbook, `HIIVE_Applicants_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   useEffect(() => {
     fetchData();
@@ -170,6 +205,13 @@ export default function AdminApplicants() {
             <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.applicants')}</h2>
           </div>
           <div className="flex gap-4">
+            <button 
+              onClick={downloadExcel}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+            >
+              <Download size={18} />
+              {language === 'ar' ? 'تحميل البيانات' : 'Download Data'}
+            </button>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-sm">search</span>
               <input 
