@@ -4,7 +4,7 @@ import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firest
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
-import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download } from 'lucide-react';
+import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download, Ban, UserCog, UserMinus, RotateCcw, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
 import * as XLSX from 'xlsx';
@@ -391,48 +391,61 @@ export default function AdminApplicants() {
                       </select>
                     </td>
                     <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-3">
+                        {/* Manage Role Button */}
                         <button 
                           onClick={() => handleToggleRole(u.uid, u.role)}
                           disabled={u.uid === user?.uid || roleLoadingId === u.uid || u.email === SUPER_ADMIN_EMAIL}
                           className={cn(
-                            "p-2 rounded-lg transition-all",
-                            u.role === 'admin' 
-                              ? "bg-primary/10 text-primary hover:bg-primary/20" 
-                              : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest",
+                            "transition-all duration-300 hover:scale-110 active:scale-95 disabled:opacity-0",
+                            u.role === 'admin' ? "text-cyan-400" : "text-cyan-400/60 hover:text-cyan-400",
                             u.email === SUPER_ADMIN_EMAIL && "hidden"
                           )}
                           title={u.email === SUPER_ADMIN_EMAIL ? (language === 'ar' ? 'حساب المسؤول الرئيسي' : 'Main Admin Account') : (u.role === 'admin' ? (language === 'ar' ? 'تنزيل لمرتبة مستخدم' : 'Demote to Applicant') : (language === 'ar' ? 'تعيين كمسؤول' : 'Promote to Admin'))}
                         >
-                          <span className="material-symbols-outlined text-[20px]">
-                            {u.role === 'admin' ? 'person_remove' : 'admin_panel_settings'}
-                          </span>
+                          <UserCog size={22} className={cn(roleLoadingId === u.uid && "animate-spin")} />
                         </button>
 
+                        {/* Block Button */}
                         <button 
                           onClick={() => handleToggleBlock(u.uid, !!u.isBlocked)}
                           disabled={u.uid === user?.uid || blockingId === u.uid || u.email === SUPER_ADMIN_EMAIL}
                           className={cn(
-                            "p-2 rounded-lg transition-all",
-                            u.isBlocked 
-                              ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" 
-                              : "bg-amber-100 text-amber-600 hover:bg-amber-200",
+                            "transition-all duration-300 hover:scale-110 active:scale-95 disabled:opacity-0",
+                            u.isBlocked ? "text-orange-500" : "text-orange-500/60 hover:text-orange-500",
                             u.email === SUPER_ADMIN_EMAIL && "hidden"
                           )}
                           title={u.email === SUPER_ADMIN_EMAIL ? (language === 'ar' ? 'حساب المسؤول الرئيسي' : 'Main Admin Account') : (u.isBlocked ? (language === 'ar' ? 'إلغاء الحظر' : 'Unblock') : (language === 'ar' ? 'حظر' : 'Block'))}
                         >
-                          <span className="material-symbols-outlined text-[20px]">
-                            {u.isBlocked ? 'person_check' : 'block'}
-                          </span>
+                          {u.isBlocked ? <RotateCcw size={22} /> : <Ban size={22} />}
                         </button>
 
+                        {/* Delete Button */}
                         {deletingId === u.uid ? (
-                          <button onClick={() => handleDeleteUser(u.uid)} className="text-error hover:scale-110 transition-transform">
-                            <span className="material-symbols-outlined text-[20px]">delete_forever</span>
-                          </button>
+                          <div className="flex items-center gap-2 animate-in zoom-in duration-200">
+                             <button 
+                               onClick={() => handleDeleteUser(u.uid)} 
+                               className="p-1 px-3 bg-error text-white text-[10px] font-black rounded-full hover:bg-error-dark"
+                             >
+                               {language === 'ar' ? 'تأكيد' : 'CONFIRM'}
+                             </button>
+                             <button 
+                               onClick={() => setDeletingId(null)} 
+                               className="text-on-surface-variant hover:text-primary transition-colors"
+                             >
+                               <X size={16} />
+                             </button>
+                          </div>
                         ) : (
-                          <button onClick={() => setDeletingId(u.uid)} disabled={u.uid === user?.uid || u.email === SUPER_ADMIN_EMAIL} className={cn("text-on-surface-variant hover:text-error transition-colors disabled:opacity-0", u.email === SUPER_ADMIN_EMAIL && "hidden")}>
-                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                          <button 
+                            onClick={() => setDeletingId(u.uid)} 
+                            disabled={u.uid === user?.uid || u.email === SUPER_ADMIN_EMAIL} 
+                            className={cn(
+                              "text-on-surface-variant/40 hover:text-white transition-all duration-300 hover:scale-110 active:scale-95 disabled:opacity-0", 
+                              u.email === SUPER_ADMIN_EMAIL && "hidden"
+                            )}
+                          >
+                            <Trash2 size={22} />
                           </button>
                         )}
                       </div>
