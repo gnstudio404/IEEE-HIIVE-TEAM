@@ -1,40 +1,68 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, doc, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { Session } from '../types';
+import { Session, SessionQuizResult } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { Video, Calendar, Clock, ExternalLink, Play, MapPin, ChevronLeft, Plus, Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Video, Calendar, Clock, ExternalLink, Play, MapPin, ChevronLeft, Plus, Settings, ClipboardCheck, CheckCircle2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 
 export default function SessionsList() {
   const { language } = useLanguage();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [quizResults, setQuizResults] = useState<Record<string, SessionQuizResult>>({});
 
   useEffect(() => {
-    const fetchSessions = async () => {
-      try {
-        const q = query(
-          collection(db, 'sessions'), 
-          where('active', '==', true),
-          orderBy('date', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
-        setSessions(data);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.LIST, 'sessions');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSessions();
-  }, []);
+    if (user) fetchUserQuizResults();
+  }, [user]);
+
+  const fetchSessions = async () => {
+    try {
+      const q = query(
+        collection(db, 'sessions'), 
+        where('active', '==', true),
+        orderBy('date', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Session));
+      setSessions(data);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.LIST, 'sessions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUserQuizResults = async () => {
+    try {
+      const q = query(collection(db, 'sessionQuizResults'), where('userId', '==', user?.uid));
+      const querySnapshot = await getDocs(q);
+      const results: Record<string, SessionQuizResult> = {};
+      querySnapshot.docs.forEach(doc => {
+        const res = doc.data() as SessionQuizResult;
+        results[res.sessionId] = res;
+      });
+      setQuizResults(results);
+    } catch (error) {
+       console.error("Error fetching quiz results:", error);
+    }
+  };
+
+  const isSessionFinished = (session: Session) => {
+    if (session.endTime) {
+      return Date.now() > new Date(session.endTime).getTime();
+    }
+    // Fallback for old sessions
+    const sessionDate = new Date(session.date).getTime();
+    const durationMs = (session.durationMinutes || 60) * 60 * 1000;
+    return Date.now() > (sessionDate + durationMs);
+  };
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -132,7 +160,35 @@ export default function SessionsList() {
                 </div>
 
                 <div className="md:self-center">
-                  {session.link ? (
+                  {isSessionFinished(session) ? (
+                    session.hasQuiz ? (
+                      quizResults[session.id] ? (
+                        <div className="flex flex-col items-center gap-2">
+                           <div className="bg-primary/20 text-primary p-4 rounded-2xl flex items-center justify-center gap-2 font-black">
+                              <CheckCircle2 size={24} />
+                              <span>{quizResults[session.id].score}/{quizResults[session.id].totalQuestions}</span>
+                           </div>
+                           <span className="text-[10px] font-black uppercase text-on-surface-variant/40">
+                             {language === 'ar' ? 'تم الاختبار' : 'Completed'}
+                           </span>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => navigate(`/sessions/${session.id}/quiz`)}
+                          className="bg-secondary text-white p-4 rounded-2xl hive-shadow hover:brightness-110 active:scale-95 transition-all flex items-center gap-2"
+                        >
+                          <span className="font-bold hidden lg:inline">
+                            {language === 'ar' ? 'اختبر الان' : 'Test Now'}
+                          </span>
+                          <ClipboardCheck size={20} />
+                        </button>
+                      )
+                    ) : (
+                      <div className="text-on-surface-variant/30 font-black uppercase tracking-widest text-xs border border-outline-variant/10 px-6 py-4 rounded-2xl bg-surface-container-high/20">
+                         {language === 'ar' ? 'انتهى السيشن' : 'Ended'}
+                      </div>
+                    )
+                  ) : session.link ? (
                     <a 
                       href={session.link} 
                       target="_blank" 

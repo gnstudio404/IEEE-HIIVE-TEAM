@@ -100,6 +100,45 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "teamId"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "Live or recorded educational session",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "titleAr": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "link": { "type": "string" },
+        "active": { "type": "boolean" },
+        "hasQuiz": { "type": "boolean" }
+      },
+      "required": ["title", "date", "endTime", "active"]
+    },
+    "SessionQuestion": {
+      "title": "SessionQuestion",
+      "description": "Quiz question for a specific session",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "text": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "correctOptionIndex": { "type": "number" }
+      },
+      "required": ["sessionId", "text", "options", "correctOptionIndex"]
+    },
+    "SessionQuizResult": {
+      "title": "SessionQuizResult",
+      "description": "User results for a session quiz",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "userId": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" }
+      },
+      "required": ["sessionId", "userId", "score"]
     }
   },
   "firestore": {
@@ -108,6 +147,9 @@
     "/responses/{responseId}": { "schema": "Response", "description": "User test responses" },
     "/scores/{userId}": { "schema": "Score", "description": "Calculated user profiles" },
     "/teams/{teamId}": { "schema": "Team", "description": "Team definitions" },
-    "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Team assignments" }
+    "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Team assignments" },
+    "/sessions/{sessionId}": { "schema": "Session", "description": "Educational sessions" },
+    "/sessionQuestions/{questionId}": { "schema": "SessionQuestion", "description": "Questions for session quizzes" },
+    "/sessionQuizResults/{resultId}": { "schema": "SessionQuizResult", "description": "User quiz attempts" }
   }
 }

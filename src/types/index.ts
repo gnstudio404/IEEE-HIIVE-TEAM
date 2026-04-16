@@ -100,8 +100,31 @@ export interface Session {
   description: string;
   descriptionAr: string;
   date: string;
+  durationMinutes: number;
+  endTime: string;
   link?: string;
   type: 'live' | 'recorded' | 'workshop';
   active: boolean;
+  hasQuiz: boolean;
   createdAt: string;
+}
+
+export interface SessionQuestion {
+  id: string;
+  sessionId: string;
+  text: string;
+  textAr: string;
+  options: string[];
+  optionsAr: string[];
+  correctOptionIndex: number;
+  order: number;
+}
+
+export interface SessionQuizResult {
+  id: string;
+  sessionId: string;
+  userId: string;
+  score: number;
+  totalQuestions: number;
+  completedAt: string;
 }

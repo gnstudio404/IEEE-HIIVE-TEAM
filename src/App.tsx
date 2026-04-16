@@ -18,7 +18,9 @@ import AdminTeams from './pages/AdminTeams';
 import AdminApplicants from './pages/AdminApplicants';
 import AdminTeamDetails from './pages/AdminTeamDetails';
 import AdminSessions from './pages/AdminSessions';
+import AdminSessionQuiz from './pages/AdminSessionQuiz';
 import SessionsList from './pages/SessionsList';
+import SessionQuiz from './pages/SessionQuiz';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
@@ -47,6 +49,7 @@ function AppRoutes() {
         <Route path="teams" element={<ApplicantTeams />} />
         <Route path="profile" element={<Profile />} />
         <Route path="sessions" element={<SessionsList />} />
+        <Route path="sessions/:sessionId/quiz" element={<ProtectedRoute><SessionQuiz /></ProtectedRoute>} />
         
         {/* Admin Routes */}
         <Route path="admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
@@ -55,6 +58,7 @@ function AppRoutes() {
         <Route path="admin/teams/:teamId" element={<ProtectedRoute adminOnly><AdminTeamDetails /></ProtectedRoute>} />
         <Route path="admin/applicants" element={<ProtectedRoute adminOnly><AdminApplicants /></ProtectedRoute>} />
         <Route path="admin/sessions" element={<ProtectedRoute adminOnly><AdminSessions /></ProtectedRoute>} />
+        <Route path="admin/sessions/:sessionId/quiz" element={<ProtectedRoute adminOnly><AdminSessionQuiz /></ProtectedRoute>} />
       </Route>
     </Routes>
   );
