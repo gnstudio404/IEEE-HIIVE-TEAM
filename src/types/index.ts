@@ -128,3 +128,15 @@ export interface SessionQuizResult {
   totalQuestions: number;
   completedAt: string;
 }
+
+export interface SessionFeedback {
+  id: string;
+  sessionId: string;
+  userId: string;
+  overallRating: number;
+  topicRating: number;
+  instructorRating: number;
+  benefitRating: number;
+  comment?: string;
+  createdAt: string;
+}

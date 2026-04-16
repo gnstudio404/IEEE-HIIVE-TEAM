@@ -16,10 +16,14 @@ export default function SessionsList() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [quizResults, setQuizResults] = useState<Record<string, SessionQuizResult>>({});
+  const [feedbacks, setFeedbacks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchSessions();
-    if (user) fetchUserQuizResults();
+    if (user) {
+      fetchUserQuizResults();
+      fetchUserFeedbacks();
+    }
   }, [user]);
 
   const fetchSessions = async () => {
@@ -51,6 +55,20 @@ export default function SessionsList() {
       setQuizResults(results);
     } catch (error) {
        console.error("Error fetching quiz results:", error);
+    }
+  };
+
+  const fetchUserFeedbacks = async () => {
+    try {
+      const q = query(collection(db, 'sessionFeedbacks'), where('userId', '==', user?.uid));
+      const querySnapshot = await getDocs(q);
+      const fs: Record<string, boolean> = {};
+      querySnapshot.docs.forEach(doc => {
+        fs[doc.data().sessionId] = true;
+      });
+      setFeedbacks(fs);
+    } catch (error) {
+       console.error("Error fetching feedbacks:", error);
     }
   };
 
@@ -168,9 +186,18 @@ export default function SessionsList() {
                               <CheckCircle2 size={24} />
                               <span>{quizResults[session.id].score}/{quizResults[session.id].totalQuestions}</span>
                            </div>
-                           <span className="text-[10px] font-black uppercase text-on-surface-variant/40">
-                             {language === 'ar' ? 'تم الاختبار' : 'Completed'}
-                           </span>
+                           {feedbacks[session.id] ? (
+                             <span className="text-[10px] font-black uppercase text-secondary">
+                               {language === 'ar' ? 'تم التقييم' : 'Feedback Sent'}
+                             </span>
+                           ) : (
+                              <button 
+                                onClick={() => navigate(`/sessions/${session.id}/feedback`)}
+                                className="text-[10px] font-black uppercase text-error hover:underline"
+                              >
+                                {language === 'ar' ? 'قيم الآن' : 'Rate Now'}
+                              </button>
+                           )}
                         </div>
                       ) : (
                         <button 
@@ -184,8 +211,23 @@ export default function SessionsList() {
                         </button>
                       )
                     ) : (
-                      <div className="text-on-surface-variant/30 font-black uppercase tracking-widest text-xs border border-outline-variant/10 px-6 py-4 rounded-2xl bg-surface-container-high/20">
-                         {language === 'ar' ? 'انتهى السيشن' : 'Ended'}
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="text-on-surface-variant/30 font-black uppercase tracking-widest text-xs border border-outline-variant/10 px-6 py-4 rounded-2xl bg-surface-container-high/20">
+                           {language === 'ar' ? 'انتهى السيشن' : 'Ended'}
+                        </div>
+                        {!feedbacks[session.id] && (
+                          <button 
+                            onClick={() => navigate(`/sessions/${session.id}/feedback`)}
+                            className="text-[10px] font-black uppercase text-error hover:underline"
+                          >
+                            {language === 'ar' ? 'قيم الآن' : 'Rate Now'}
+                          </button>
+                        )}
+                        {feedbacks[session.id] && (
+                           <span className="text-[10px] font-black uppercase text-secondary">
+                             {language === 'ar' ? 'تم التقييم' : 'Feedback Sent'}
+                           </span>
+                        )}
                       </div>
                     )
                   ) : session.link ? (

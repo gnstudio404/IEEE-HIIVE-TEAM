@@ -139,6 +139,22 @@
         "totalQuestions": { "type": "number" }
       },
       "required": ["sessionId", "userId", "score"]
+    },
+    "SessionFeedback": {
+      "title": "SessionFeedback",
+      "description": "User feedback and rating for a session",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "userId": { "type": "string" },
+        "overallRating": { "type": "number" },
+        "topicRating": { "type": "number" },
+        "instructorRating": { "type": "number" },
+        "benefitRating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["sessionId", "userId", "overallRating", "topicRating", "instructorRating", "benefitRating", "createdAt"]
     }
   },
   "firestore": {
@@ -150,6 +166,7 @@
     "/assignments/{assignmentId}": { "schema": "Assignment", "description": "Team assignments" },
     "/sessions/{sessionId}": { "schema": "Session", "description": "Educational sessions" },
     "/sessionQuestions/{questionId}": { "schema": "SessionQuestion", "description": "Questions for session quizzes" },
-    "/sessionQuizResults/{resultId}": { "schema": "SessionQuizResult", "description": "User quiz attempts" }
+    "/sessionQuizResults/{resultId}": { "schema": "SessionQuizResult", "description": "User quiz attempts" },
+    "/sessionFeedbacks/{feedbackId}": { "schema": "SessionFeedback", "description": "Session ratings and feedback" }
   }
 }

@@ -145,10 +145,10 @@ export default function SessionQuiz() {
         </div>
 
         <button 
-          onClick={() => navigate('/sessions')}
+          onClick={() => navigate(`/sessions/${sessionId}/feedback`)}
           className="w-full bg-primary text-white p-5 rounded-2xl font-black tracking-widest uppercase hover:brightness-110 shadow-xl shadow-primary/20 transition-all"
         >
-          {language === 'ar' ? 'العودة للسيشنات' : 'Back to Sessions'}
+          {language === 'ar' ? 'البدء في التقييم' : 'Start Feedback'}
         </button>
       </motion.div>
     );

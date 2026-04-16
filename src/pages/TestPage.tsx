@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, addDoc, doc, updateDoc, setDoc, query, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, setDoc, query, orderBy, writeBatch, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Question, Traits, UserScore, UserRoleType, PersonalityProfile } from '../types';
 import { toast } from 'sonner';
-import { CheckCircle2, ChevronRight, ChevronLeft, Loader2, Send } from 'lucide-react';
+import { CheckCircle2, ChevronRight, ChevronLeft, Loader2, Send, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../context/LanguageContext';
 import { LIKERT_SCALE, INITIAL_QUESTIONS } from '../constants';
@@ -19,6 +19,7 @@ export default function TestPage() {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingFeedback, setPendingFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     // Redirect to profile if any required field is missing
@@ -41,7 +42,55 @@ export default function TestPage() {
       return;
     }
 
+    const validateSessions = async () => {
+       if (!user) return;
+       try {
+         // Get all sessions that have ended and have quizzes
+         const now = new Date().toISOString();
+         const sessionsSnap = await getDocs(query(
+           collection(db, 'sessions'),
+           where('active', '==', true),
+           where('hasQuiz', '==', true)
+         ));
+         
+         const endedSessions = sessionsSnap.docs.filter(doc => doc.data().endTime < now);
+         
+         if (endedSessions.length > 0) {
+           // Get user results
+           const resultsSnap = await getDocs(query(
+             collection(db, 'sessionQuizResults'),
+             where('userId', '==', user.uid)
+           ));
+           const completedSessionIds = resultsSnap.docs.map(doc => doc.data().sessionId);
+           
+           // Check if any ended session is not completed
+           const incompleteSession = endedSessions.find(s => !completedSessionIds.includes(s.id));
+           if (incompleteSession) {
+             setPendingFeedback("incomplete");
+             return;
+           }
+
+           // Get user feedbacks
+           const feedbackSnap = await getDocs(query(
+             collection(db, 'sessionFeedbacks'),
+             where('userId', '==', user.uid)
+           ));
+           const feedbackSessionIds = feedbackSnap.docs.map(doc => doc.data().sessionId);
+           
+           // Check if any completed session lacks feedback
+           const sessionWithoutFeedback = endedSessions.find(s => !feedbackSessionIds.includes(s.id));
+           if (sessionWithoutFeedback) {
+             setPendingFeedback(sessionWithoutFeedback.id);
+             return;
+           }
+         }
+       } catch (error) {
+         console.error("Error validating sessions:", error);
+       }
+    };
+
     const fetchQuestions = async () => {
+      await validateSessions();
       try {
         const q = query(collection(db, 'questions'), orderBy('order', 'asc'));
         let querySnapshot;
@@ -319,6 +368,33 @@ export default function TestPage() {
       <div className="flex flex-col items-center justify-center h-64 gap-4">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
         <p className="text-slate-500 font-medium">Loading your test...</p>
+      </div>
+    );
+  }
+
+  if (pendingFeedback) {
+    return (
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border-t-8 border-error shadow-2xl max-w-xl mx-auto space-y-6">
+        <div className="w-20 h-20 bg-error/10 rounded-full flex items-center justify-center mx-auto text-error">
+          <AlertCircle size={40} />
+        </div>
+        <div className="space-y-2">
+          <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+             {language === 'ar' ? 'تنبيه: متطلبات ناقصة' : 'Attention: Missing Requirements'}
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+            {pendingFeedback === 'incomplete' 
+              ? (language === 'ar' ? 'يجب البدء وإكمال جميع الجلسات التدريبية المتاحة أولاً قبل إجراء الاختبار النهائي.' : 'You must complete all available training sessions and their assessments before taking the final test.')
+              : (language === 'ar' ? 'يجب تقديم التقييم للجلسات التي أتممتها أولاً. تقييمك يساعدنا على التحسين.' : 'You must provide feedback for the sessions you completed first. Your feedback helps us improve.')
+            }
+          </p>
+        </div>
+        <button 
+          onClick={() => navigate('/sessions')}
+          className="w-full bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:brightness-110 transition-all flex items-center justify-center gap-2"
+        >
+           {language === 'ar' ? 'الانتقال إلى الجلسات' : 'Go to Sessions'}
+        </button>
       </div>
     );
   }

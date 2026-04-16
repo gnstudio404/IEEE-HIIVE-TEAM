@@ -21,6 +21,7 @@ import AdminSessions from './pages/AdminSessions';
 import AdminSessionQuiz from './pages/AdminSessionQuiz';
 import SessionsList from './pages/SessionsList';
 import SessionQuiz from './pages/SessionQuiz';
+import SessionFeedback from './pages/SessionFeedback';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="profile" element={<Profile />} />
         <Route path="sessions" element={<SessionsList />} />
         <Route path="sessions/:sessionId/quiz" element={<ProtectedRoute><SessionQuiz /></ProtectedRoute>} />
+        <Route path="sessions/:sessionId/feedback" element={<ProtectedRoute><SessionFeedback /></ProtectedRoute>} />
         
         {/* Admin Routes */}
         <Route path="admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />

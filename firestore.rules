@@ -115,6 +115,17 @@ service cloud.firestore {
              data.updatedAt is string;
     }
 
+    function isValidFeedback(data) {
+      return hasRequiredFields(['sessionId', 'userId', 'overallRating', 'topicRating', 'instructorRating', 'benefitRating', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.overallRating is number && data.overallRating >= 1 && data.overallRating <= 5 &&
+             data.topicRating is number && data.topicRating >= 1 && data.topicRating <= 5 &&
+             data.instructorRating is number && data.instructorRating >= 1 && data.instructorRating <= 5 &&
+             data.benefitRating is number && data.benefitRating >= 1 && data.benefitRating <= 5 &&
+             (!('comment' in data) || (data.comment is string && data.comment.size() < 2000)) &&
+             data.createdAt is string;
+    }
+
     function isValidTeam(data) {
       return hasRequiredFields(['name', 'minSize', 'maxSize', 'memberCount']) &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
@@ -185,6 +196,12 @@ service cloud.firestore {
     match /sessionQuizResults/{resultId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    match /sessionFeedbacks/{feedbackId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && isValidFeedback(request.resource.data);
       allow update, delete: if isAdmin();
     }
   }

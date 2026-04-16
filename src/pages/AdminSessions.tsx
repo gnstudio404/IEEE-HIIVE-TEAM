@@ -3,7 +3,7 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy,
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Session } from '../types';
 import { useLanguage } from '../context/LanguageContext';
-import { Plus, Trash2, Edit2, Save, X, Video, Calendar, Link as LinkIcon, CheckCircle2, AlertCircle, Clock, ClipboardCheck, Loader2, Download, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, Video, Calendar, Link as LinkIcon, CheckCircle2, AlertCircle, Clock, ClipboardCheck, Loader2, Download, FileSpreadsheet, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
@@ -152,6 +152,56 @@ export default function AdminSessions() {
     } catch (error) {
       console.error('Error exporting results:', error);
       toast.error(language === 'ar' ? 'حدث خطأ أثناء تحميل الملف' : 'Error downloading file');
+    }
+  };
+
+  const handleExportFeedback = async (session: Session) => {
+    try {
+      const toastId = toast.loading(language === 'ar' ? 'جاري تجهيز تقييمات الطلاب...' : 'Preparing student feedback...');
+      
+      const feedbackRef = collection(db, 'sessionFeedbacks');
+      const qFeedback = query(feedbackRef, where('sessionId', '==', session.id));
+      const feedbackSnap = await getDocs(qFeedback);
+      
+      if (feedbackSnap.empty) {
+        toast.dismiss(toastId);
+        toast.error(language === 'ar' ? 'لا توجد تقييمات لهذا السيشن' : 'No feedback found for this session');
+        return;
+      }
+
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const usersMap = new Map();
+      usersSnap.docs.forEach(doc => {
+        usersMap.set(doc.id, doc.data());
+      });
+
+      const data = feedbackSnap.docs.map(doc => {
+        const feedback = doc.data();
+        const user = usersMap.get(feedback.userId);
+        return {
+          [language === 'ar' ? 'أسم الجلسة' : 'Session Name']: language === 'ar' ? session.titleAr : session.title,
+          [language === 'ar' ? 'الأسم' : 'Name']: user?.name || 'Unknown',
+          [language === 'ar' ? 'الأيميل' : 'Email']: user?.email || 'N/A',
+          [language === 'ar' ? 'التقييم العام' : 'Overall']: feedback.overallRating,
+          [language === 'ar' ? 'الموضوع' : 'Topic']: feedback.topicRating,
+          [language === 'ar' ? 'المحاضر' : 'Instructor']: feedback.instructorRating,
+          [language === 'ar' ? 'الاستفادة' : 'Benefit']: feedback.benefitRating,
+          [language === 'ar' ? 'التعليق' : 'Comment']: feedback.comment || '',
+          [language === 'ar' ? 'التاريخ' : 'Date']: new Date(feedback.createdAt).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Feedback");
+
+      XLSX.writeFile(wb, `${session.title}_Feedback.xlsx`);
+      
+      toast.dismiss(toastId);
+      toast.success(language === 'ar' ? 'تم تحميل ملف التقييمات بنجاح' : 'Feedback file downloaded successfully');
+    } catch (error) {
+      console.error('Error exporting feedback:', error);
+      toast.error(language === 'ar' ? 'حدث خطأ أثناء تحميل التقييمات' : 'Error downloading feedback');
     }
   };
 
@@ -380,7 +430,15 @@ export default function AdminSessions() {
                     title={language === 'ar' ? 'تحميل درجات الطلاب' : 'Download Student Scores'}
                   >
                     <Download size={18} />
-                    <span className="md:hidden lg:inline">{language === 'ar' ? 'تحميل الدرجات' : 'Download Scores'}</span>
+                    <span className="md:hidden lg:inline">{language === 'ar' ? 'الدرجات' : 'Scores'}</span>
+                  </button>
+                  <button 
+                    onClick={() => handleExportFeedback(session)}
+                    className="flex items-center gap-2 bg-yellow-500/10 text-yellow-600 px-4 py-2 rounded-xl font-bold hover:bg-yellow-500/20 transition-all text-sm"
+                    title={language === 'ar' ? 'تحميل تقييمات الطلاب' : 'Download Student Feedbacks'}
+                  >
+                    <Star size={18} />
+                    <span className="md:hidden lg:inline">{language === 'ar' ? 'التقييمات' : 'Feedbacks'}</span>
                   </button>
                   <button 
                     onClick={() => navigate(`/admin/sessions/${session.id}/quiz`)}
