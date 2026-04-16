@@ -36,7 +36,13 @@ export default function Login() {
       }
 
       toast.success(language === 'ar' ? 'مرحباً بعودتك!' : 'Welcome back!');
-      navigate('/');
+      
+      const userDoc = await getDoc(doc(db, 'users', user!.uid));
+      if (userDoc.exists() && userDoc.data().role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to login');
     } finally {
@@ -98,7 +104,13 @@ export default function Login() {
       }
       
       toast.success(language === 'ar' ? 'تم تسجيل الدخول بواسطة جوجل!' : 'Signed in with Google!');
-      navigate('/');
+      if (userDoc?.exists() && userDoc.data().role === 'admin') {
+        navigate('/admin');
+      } else if (user.email === 'omarwork1011@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       if (error.code === 'auth/popup-closed-by-user') {

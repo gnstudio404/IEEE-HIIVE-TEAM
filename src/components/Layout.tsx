@@ -15,6 +15,8 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const handleLogout = async () => {
     await auth.signOut();
     navigate('/login');
@@ -22,10 +24,12 @@ export default function Layout() {
 
   const navItems = isAdmin 
     ? [
+        { name: t('nav.home'), path: '/', icon: 'home' },
         { name: t('nav.dashboard'), path: '/admin', icon: 'dashboard' },
         { name: t('nav.users'), path: '/admin/applicants', icon: 'group' },
         { name: t('nav.questions'), path: '/admin/questions', icon: 'quiz' },
         { name: t('nav.teams'), path: '/admin/teams', icon: 'diversity_3' },
+        { name: language === 'ar' ? 'السيشنات' : 'Sessions', path: '/admin/sessions', icon: 'video_library' },
       ]
     : [
         { name: t('nav.home'), path: '/', icon: 'dashboard' },
@@ -87,7 +91,12 @@ export default function Layout() {
         {/* TopAppBar (Admin) */}
         <header className="fixed top-0 right-0 w-full md:w-[calc(100%-16rem)] z-40 bg-surface-container-lowest/80 backdrop-blur-md border-b border-outline-variant/10 shadow-[0px_12px_32px_rgba(0,76,82,0.06)] flex justify-between items-center px-8 h-16">
           <div className="flex items-center gap-4">
-            <span className="material-symbols-outlined text-primary cursor-pointer md:hidden" onClick={() => {}}>menu</span>
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 hover:bg-surface-container-low rounded-lg transition-colors"
+            >
+              <span className="material-symbols-outlined text-primary">menu</span>
+            </button>
             <h1 className="font-headline text-sm font-semibold uppercase tracking-widest text-primary">Precision Dashboard</h1>
           </div>
           <div className="flex items-center gap-6">
@@ -113,6 +122,61 @@ export default function Layout() {
             </div>
           </div>
         </header>
+
+        {/* Mobile Drawer (Admin) */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-[100] md:hidden">
+            <div 
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+            <aside className={cn(
+              "absolute top-0 w-72 h-full bg-surface-container-lowest shadow-2xl transition-all duration-300 p-6 flex flex-col",
+              isRTL ? "right-0" : "left-0"
+            )}>
+              <div className="flex justify-between items-center mb-8">
+                <Logo className="h-12 w-auto" />
+                <button 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 hover:bg-surface-container-low rounded-lg transition-colors"
+                >
+                  <span className="material-symbols-outlined text-on-surface-variant">close</span>
+                </button>
+              </div>
+              
+              <nav className="flex-1 space-y-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-headline font-medium tracking-tight",
+                      location.pathname === item.path
+                        ? "text-primary font-bold bg-surface-container-high shadow-sm"
+                        : "text-on-surface-variant hover:text-primary hover:bg-surface-container-low"
+                    )}
+                  >
+                    <span className={cn("material-symbols-outlined", location.pathname === item.path && "fill-1")}>
+                      {item.icon}
+                    </span>
+                    <span>{item.name}</span>
+                  </Link>
+                ))}
+              </nav>
+
+              <div className="pt-6 border-t border-outline-variant/10">
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:text-error hover:bg-error-container/10 rounded-lg transition-all text-sm font-medium"
+                >
+                  <span className="material-symbols-outlined text-[20px]">logout</span>
+                  {t('nav.logout')}
+                </button>
+              </div>
+            </aside>
+          </div>
+        )}
 
         {/* Main Content (Admin) */}
         <main className="md:ml-64 pt-24 px-6 md:px-10 pb-12 min-h-screen">

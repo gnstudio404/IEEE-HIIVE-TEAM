@@ -51,7 +51,12 @@ export default function Register() {
       }
 
       toast.success(language === 'ar' ? 'تم إنشاء الحساب بنجاح!' : 'Account created successfully!');
-      navigate('/');
+      
+      if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to register');
     } finally {
@@ -110,7 +115,14 @@ export default function Register() {
       }
       
       toast.success(language === 'ar' ? 'تم تسجيل الدخول بواسطة جوجل!' : 'Signed in with Google!');
-      navigate('/');
+      
+      if (userDoc?.exists() && userDoc.data().role === 'admin') {
+        navigate('/admin');
+      } else if (user.email === 'omarwork1011@gmail.com') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to sign in with Google');
     }

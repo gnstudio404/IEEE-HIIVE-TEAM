@@ -92,3 +92,16 @@ export interface Assignment {
   assignedBy: string;
   timestamp: string;
 }
+
+export interface Session {
+  id: string;
+  title: string;
+  titleAr: string;
+  description: string;
+  descriptionAr: string;
+  date: string;
+  link?: string;
+  type: 'live' | 'recorded' | 'workshop';
+  active: boolean;
+  createdAt: string;
+}

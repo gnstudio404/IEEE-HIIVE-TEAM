@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Clock, Users, ArrowRight, ClipboardList, Trophy, Star, HelpCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Users, ArrowRight, ClipboardList, Trophy, Star, HelpCircle, Video } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -25,7 +25,7 @@ export default function ApplicantHome() {
       profile.country && 
       profile.photoURL;
 
-    if (profile && !isProfileComplete) {
+    if (profile && !isProfileComplete && profile.role !== 'admin') {
       navigate('/profile');
       return;
     }
@@ -231,94 +231,61 @@ export default function ApplicantHome() {
         </div>
       </div>
 
-      {/* Secondary Layout: Human Impact & Info */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        {/* Impact Section */}
-        <div className="lg:col-span-3 bg-surface-container-lowest rounded-xl p-10 hive-shadow overflow-hidden relative">
-          <div className="relative z-10 max-w-md">
-            <span className="text-primary font-bold tracking-widest text-xs uppercase mb-4 block">
-              {language === 'ar' ? 'التركيز على الاستدامة' : 'Sustainability Focus'}
-            </span>
-            <h3 className="text-3xl font-extrabold text-primary tracking-tight mb-4">
-              {language === 'ar' ? 'التأثير البشري' : 'Human Impact'}
-            </h3>
-            <p className="text-on-surface-variant leading-relaxed mb-8">
-              {language === 'ar' 
-                ? 'تكرس خليتنا الهندسية جهودها لحلول الطاقة النظيفة. نصمم أنظمة تمكن المجتمعات من خلال التكنولوجيا المستدامة والتكامل المعماري الدقيق.'
-                : 'Our engineering hive is dedicated to clean energy solutions. We design systems that empower communities through sustainable technology and precise architectural integration.'}
-            </p>
-            <div className="flex gap-8">
-              <div>
-                <div className="text-2xl font-bold text-primary">12.4 GW</div>
-                <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                  {language === 'ar' ? 'طاقة نظيفة مولدة' : 'Clean Energy Generated'}
+      {/* Sessions Section */}
+      <section>
+        <Link 
+          to="/sessions"
+          className="block bg-surface-container-lowest rounded-[40px] p-12 hive-shadow relative overflow-hidden group hover:ring-2 ring-primary/20 transition-all border border-outline-variant/10"
+        >
+          <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-110 group-hover:opacity-20 transition-all duration-700">
+            <Video size={160} className="text-primary" />
+          </div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="max-w-xl text-center md:text-left">
+              <span className="text-secondary font-black tracking-[0.2em] text-xs uppercase mb-6 block">
+                {language === 'ar' ? 'التعلم المستمر' : 'Continuous Learning'}
+              </span>
+              <h3 className="text-5xl font-black text-primary tracking-tighter mb-6 leading-none">
+                {language === 'ar' ? 'السيشنات والدورات' : 'Sessions & Workshops'}
+              </h3>
+              <p className="text-on-surface-variant text-lg leading-relaxed font-medium mb-10">
+                {language === 'ar' 
+                  ? 'استكشف الجدول الزمني للسيشنات المباشرة، الورش الفنية، والمحاضرات المسجلة المصممة لتعزيز مهاراتك الهندسية.'
+                  : 'Explore our schedule of live sessions, technical workshops, and recorded lectures designed to enhance your engineering expertise.'}
+              </p>
+              
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+                    <Video className="text-primary" size={24} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-secondary uppercase italic">{language === 'ar' ? 'مباشر' : 'Live'}</div>
+                    <div className="text-sm font-bold text-on-surface-variant">{language === 'ar' ? 'سيشنات تفاعلية' : 'Interactive Sessions'}</div>
+                  </div>
                 </div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-primary">850k</div>
-                <div className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                  {language === 'ar' ? 'حياة تأثرت' : 'Lives Impacted'}
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-secondary/10 rounded-2xl flex items-center justify-center">
+                    <Trophy className="text-secondary" size={24} />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-secondary uppercase italic">{language === 'ar' ? 'شهادات' : 'Certificates'}</div>
+                    <div className="text-sm font-bold text-on-surface-variant">{language === 'ar' ? 'اعتماد مهارات' : 'Skill Validation'}</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          {/* Artistic Imagery */}
-          <div className="absolute right-0 top-0 h-full w-1/3 hidden md:block">
-            <div className="w-full h-full bg-primary/5 clip-path-polygon">
-              <img 
-                className="w-full h-full object-cover mix-blend-overlay opacity-60" 
-                src="https://picsum.photos/seed/energy/800/800"
-                alt="Energy"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Side Card: Resources */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-primary-gradient rounded-xl p-8 text-white relative overflow-hidden">
-            <h4 className="text-xl font-bold mb-4">
-              {language === 'ar' ? 'إرشادات المهندس' : 'Engineer Guidelines'}
-            </h4>
-            <ul className="space-y-4">
-              <li className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary-fixed text-sm">verified_user</span>
-                <span className="text-sm font-medium opacity-90">Architecture Standards v4.2</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary-fixed text-sm">verified_user</span>
-                <span className="text-sm font-medium opacity-90">Safety Protocols & Ethics</span>
-              </li>
-            </ul>
-            <div className="mt-8">
-              <a className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 group" href="#">
-                {language === 'ar' ? 'تحميل PDF' : 'Download PDF'}
-                <span className="material-symbols-outlined text-xs group-hover:translate-x-1 transition-transform">download</span>
-              </a>
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-24 h-24 bg-primary text-white rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-500">
+                <ArrowRight size={40} className={cn(language === 'ar' && "rotate-180")} />
+              </div>
+              <span className="text-primary font-black text-xs uppercase tracking-widest">{language === 'ar' ? 'استعرض الكل' : 'View All'}</span>
             </div>
           </div>
-          <div className="bg-surface-container-low rounded-xl p-8">
-            <h4 className="text-primary font-bold mb-4">
-              {language === 'ar' ? 'آخر التحديثات' : 'Latest Updates'}
-            </h4>
-            <div className="space-y-4">
-              <div className="flex gap-3">
-                <div className="w-2 h-2 rounded-full bg-secondary-container mt-1.5 flex-shrink-0"></div>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  {language === 'ar' ? 'بدء مشروع رياح بحري جديد في مجموعة بحر الشمال.' : 'New offshore wind project initiated in the North Sea cluster.'}
-                </p>
-              </div>
-              <div className="flex gap-3">
-                <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>
-                <p className="text-xs text-on-surface-variant leading-relaxed">
-                  {language === 'ar' ? 'ندوة فنية قادمة حول موازنة الأحمال المدعومة بالذكاء الاصطناعي.' : 'Upcoming technical seminar on AI-driven load balancing.'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+        </Link>
+      </section>
     </div>
   );
 }

@@ -171,5 +171,10 @@ service cloud.firestore {
       allow create, update: if isAdmin() && isValidAssignment(request.resource.data);
       allow delete: if isAdmin();
     }
+
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
   }
 }
