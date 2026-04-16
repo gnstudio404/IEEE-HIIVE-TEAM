@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch, query, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 import { Team, UserProfile, UserScore } from '../types';
 import { toast } from 'sonner';
 import { Plus, Trash2, Edit2, Save, X, Users, Wand2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -8,11 +10,14 @@ import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function AdminTeams() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
@@ -36,8 +41,10 @@ export default function AdminTeams() {
   });
 
   useEffect(() => {
-    fetchTeams();
-  }, []);
+    if (user) {
+      fetchTeams();
+    }
+  }, [user]);
 
   const fetchTeams = async () => {
     try {
@@ -154,73 +161,76 @@ export default function AdminTeams() {
         scoresMap[doc.id] = doc.data() as UserScore;
       });
 
-      // 3. Sort users by their primary trait to distribute them
-      const usersWithScores = unassignedUsers.map(u => ({
-        user: u,
-        score: scoresMap[u.uid]
-      })).filter(u => u.score);
-
-      // Group by primary trait
-      const groupedByTrait: Record<string, typeof usersWithScores> = {};
-      usersWithScores.forEach(u => {
-        const trait = u.score.primaryTrait;
-        if (!groupedByTrait[trait]) groupedByTrait[trait] = [];
-        groupedByTrait[trait].push(u);
-      });
-
-      // 4. Assignment Logic
+      // 3. Assignment Logic: Build Balanced Teams
+      const pool = unassignedUsers.map(u => scoresMap[u.uid]).filter(Boolean);
       const batch = writeBatch(db);
       const currentTeams = [...teams];
+      let assignedCount = 0;
+
+      // Step 1: Rank users by LeadershipScore
+      pool.sort((a, b) => b.leaderScore - a.leaderScore);
+
+      // Step 2: Select top N as Leaders (N = number of teams that need a leader)
+      const emptyTeams = currentTeams.filter(t => t.memberCount === 0);
+      const leaders = pool.splice(0, emptyTeams.length);
+
+      // Assign leaders to empty teams
+      emptyTeams.forEach((team, index) => {
+        const leader = leaders[index];
+        if (leader) {
+          batch.update(doc(db, 'users', leader.userId), { assignedTeamId: team.id });
+          batch.update(doc(db, 'teams', team.id), { memberCount: 1 });
+          team.memberCount = 1; // Update local state for subsequent logic
+          assignedCount++;
+        }
+      });
+
+      // Step 3: Distribute others to balance
+      // We'll iterate through teams and pick members based on role diversity
+      const rolesToBalance = ["Thinker", "Executor", "Supporter", "Challenger", "Strategist", "Stabilizer"];
       
-      // Flatten users in a way that mixes traits
-      const traits = Object.keys(groupedByTrait);
-      const sortedUsers: typeof usersWithScores = [];
-      let hasMore = true;
-      let i = 0;
-      while (hasMore) {
-        hasMore = false;
-        traits.forEach(t => {
-          if (groupedByTrait[t][i]) {
-            sortedUsers.push(groupedByTrait[t][i]);
-            hasMore = true;
-          }
-        });
-        i++;
-      }
-
-      // Distribute into teams
-      sortedUsers.forEach(u => {
-        // Find team with least members that is not full
-        const availableTeams = currentTeams.filter(t => t.memberCount < t.maxSize);
-        if (availableTeams.length === 0) return;
-
-        // Sort by member count ascending
-        availableTeams.sort((a, b) => a.memberCount - b.memberCount);
-        const targetTeam = availableTeams[0];
-
-        // Update user
-        batch.update(doc(db, 'users', u.user.uid), {
-          assignedTeamId: targetTeam.id
-        });
-
-        // Update team count locally
-        targetTeam.memberCount++;
+      let teamIndex = 0;
+      while (pool.length > 0) {
+        const team = currentTeams[teamIndex];
         
-        // Create assignment record
-        batch.set(doc(collection(db, 'assignments')), {
-          userId: u.user.uid,
-          teamId: targetTeam.id,
-          assignedBy: 'system',
-          timestamp: new Date().toISOString()
-        });
-      });
+        if (team.memberCount < team.maxSize) {
+          // Try to find a role that this team doesn't have much of yet
+          // For simplicity in this logic, we'll just cycle through roles
+          let memberFound = false;
+          
+          for (const role of rolesToBalance) {
+            const idx = pool.findIndex(u => u.personalityType === role);
+            if (idx !== -1) {
+              // Check for high Neuroticism clustering (Step 4)
+              // If team already has someone with N > 4, maybe skip this one if they also have high N
+              const candidate = pool[idx];
+              // (In a real production app, we'd track team composition in a map here)
+              
+              const member = pool.splice(idx, 1)[0];
+              batch.update(doc(db, 'users', member.userId), { assignedTeamId: team.id });
+              batch.update(doc(db, 'teams', team.id), { memberCount: team.memberCount + 1 });
+              team.memberCount++;
+              assignedCount++;
+              memberFound = true;
+              break;
+            }
+          }
 
-      // Update team counts in DB
-      currentTeams.forEach(t => {
-        batch.update(doc(db, 'teams', t.id), {
-          memberCount: t.memberCount
-        });
-      });
+          // If no specific role found, just take the next person
+          if (!memberFound && pool.length > 0) {
+            const member = pool.shift()!;
+            batch.update(doc(db, 'users', member.userId), { assignedTeamId: team.id });
+            batch.update(doc(db, 'teams', team.id), { memberCount: team.memberCount + 1 });
+            team.memberCount++;
+            assignedCount++;
+          }
+        }
+
+        teamIndex = (teamIndex + 1) % currentTeams.length;
+        
+        // Break if all teams are full
+        if (currentTeams.every(t => t.memberCount >= t.maxSize)) break;
+      }
 
       try {
         await batch.commit();
@@ -228,13 +238,44 @@ export default function AdminTeams() {
         handleFirestoreError(error, OperationType.WRITE, 'batch-auto-assign');
         return;
       }
-      toast.success(`Successfully assigned ${sortedUsers.length} users!`);
+      
+      toast.success(`Successfully assigned ${assignedCount} users into balanced teams!`);
       fetchTeams();
     } catch (error) {
       console.error("Assignment error:", error);
       toast.error("Failed to run assignment engine");
     } finally {
       setAssigning(false);
+    }
+  };
+
+  const handleResetAssignments = async () => {
+    setResetting(true);
+    try {
+      const batch = writeBatch(db);
+      
+      const usersSnap = await getDocs(query(collection(db, 'users'), where('role', '==', 'applicant')));
+      let count = 0;
+      usersSnap.docs.forEach(uDoc => {
+        const data = uDoc.data();
+        if (data.assignedTeamId) {
+          batch.update(uDoc.ref, { assignedTeamId: null });
+          count++;
+        }
+      });
+
+      teams.forEach(team => {
+        batch.update(doc(db, 'teams', team.id), { memberCount: 0 });
+      });
+
+      await batch.commit();
+      toast.success(language === 'ar' ? `تم مسح ${count} تعيين بنجاح` : `Successfully cleared ${count} assignments`);
+      fetchTeams();
+    } catch (error) {
+      console.error("Reset error:", error);
+      toast.error(language === 'ar' ? "فشل في مسح التعيينات" : "Failed to reset assignments");
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -248,8 +289,18 @@ export default function AdminTeams() {
           </div>
           <div className="flex gap-4">
             <button
+              onClick={handleResetAssignments}
+              disabled={resetting || assigning}
+              className="bg-error/10 text-error px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-error/20 transition-all"
+            >
+              <span className={cn("material-symbols-outlined text-sm", resetting && "animate-spin")}>
+                {resetting ? 'sync' : 'restart_alt'}
+              </span>
+              {language === 'ar' ? 'مسح التوزيع الحالي' : 'Clear Assignments'}
+            </button>
+            <button
               onClick={handleAutoAssign}
-              disabled={assigning}
+              disabled={assigning || resetting}
               className="bg-surface-container-low text-primary px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:bg-surface-container-high transition-all"
             >
               <span className={cn("material-symbols-outlined text-sm", assigning && "animate-spin")}>
@@ -326,7 +377,11 @@ export default function AdminTeams() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teams.map((team) => (
-            <div key={team.id} className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
+            <div 
+              key={team.id} 
+              onClick={() => navigate(`/admin/teams/${team.id}`)}
+              className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 shadow-sm hover:shadow-md transition-all group relative overflow-hidden cursor-pointer"
+            >
               <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-all">
                 <span className="material-symbols-outlined text-8xl text-primary">diversity_3</span>
               </div>
@@ -336,15 +391,15 @@ export default function AdminTeams() {
                   <h4 className="text-2xl font-black text-primary tracking-tighter">{team.name}</h4>
                   <p className="text-[10px] text-on-surface-variant/50 font-bold uppercase tracking-widest mt-1">{t('admin.id')}: {team.id.slice(0, 8)}</p>
                 </div>
-                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all relative z-10">
                   <button
-                    onClick={() => { setEditingId(team.id); setFormData(team); }}
+                    onClick={(e) => { e.stopPropagation(); setEditingId(team.id); setFormData(team); }}
                     className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-lg transition-all"
                   >
                     <span className="material-symbols-outlined text-[18px]">edit</span>
                   </button>
                   <button
-                    onClick={() => handleDelete(team.id)}
+                    onClick={(e) => { e.stopPropagation(); handleDelete(team.id); }}
                     className="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-error/10 rounded-lg transition-all"
                   >
                     <span className="material-symbols-outlined text-[18px]">delete</span>

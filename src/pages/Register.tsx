@@ -91,6 +91,13 @@ export default function Register() {
           return;
         }
       } else {
+        // Check if blocked
+        if (userDoc.data().isBlocked) {
+          await auth.signOut();
+          toast.error(language === 'ar' ? 'تم حظر حسابك. يرجى التواصل مع الإدارة.' : 'Your account has been blocked. Please contact administration.');
+          return;
+        }
+
         // Sync name and photoURL for existing users
         try {
           await setDoc(doc(db, 'users', user.uid), {

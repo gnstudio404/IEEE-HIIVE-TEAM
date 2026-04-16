@@ -6,16 +6,16 @@ service cloud.firestore {
     // ===============================================================
     //
     // Collection: users
-    // Fields: uid, name, email, phone, department, role, completedTest, assignedTeamId, createdAt
+    // Fields: uid, name, email, photoURL, phone, department, bio, country, role, completedTest, isBlocked, assignedTeamId, createdAt, updatedAt
     //
     // Collection: questions
-    // Fields: text, options (array), active, order
+    // Fields: text, textAr, trait, active, order
     //
     // Collection: responses
-    // Fields: userId, questionId, selectedOptionIndex, timestamp
+    // Fields: userId, questionId, value, timestamp
     //
     // Collection: scores
-    // Fields: userId, leadership, organization, communication, creativity, analysis, execution, primaryTrait, updatedAt
+    // Fields: userId, traits (map), role, leaderScore, updatedAt
     //
     // Collection: teams
     // Fields: name, minSize, maxSize, memberCount
@@ -39,9 +39,14 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
         (request.auth.token.email == "omarwork1011@gmail.com" && request.auth.token.email_verified == true)
       );
+    }
+
+    function isSuperAdminDoc(data) {
+      return data.email == "omarwork1011@gmail.com";
     }
 
     function hasRequiredFields(fields) {
@@ -66,15 +71,61 @@ service cloud.firestore {
              data.email == request.auth.token.email &&
              data.role in ['applicant', 'admin'] &&
              data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             (!('phone' in data) || (data.phone is string && data.phone.size() < 20)) &&
-             (!('department' in data) || (data.department is string && data.department.size() < 50));
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 30)) &&
+             (!('department' in data) || (data.department is string && data.department.size() < 100)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() < 1000)) &&
+             (!('country' in data) || (data.country is string && data.country.size() < 100)) &&
+             (!('photoURL' in data) || (data.photoURL == null || (data.photoURL is string && data.photoURL.size() < 1000))) &&
+             (!('completedTest' in data) || data.completedTest is bool) &&
+             (!('isBlocked' in data) || data.isBlocked is bool) &&
+             (!('assignedTeamId' in data) || (data.assignedTeamId == null || data.assignedTeamId is string));
+    }
+
+    function isValidQuestion(data) {
+      return hasRequiredFields(['text', 'trait', 'active', 'order']) &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 1000 &&
+             (!('textAr' in data) || (data.textAr is string && data.textAr.size() < 1000)) &&
+             data.trait in ['O', 'C', 'E', 'A', 'N'] &&
+             data.active is bool &&
+             (data.order is int || data.order is string);
     }
 
     function isValidResponse(data) {
-      return hasRequiredFields(['userId', 'questionId', 'selectedOptionIndex']) &&
+      return hasRequiredFields(['userId', 'questionId', 'value', 'timestamp']) &&
              data.userId == request.auth.uid &&
-             data.selectedOptionIndex is int &&
-             data.questionId is string && data.questionId.size() < 50;
+             data.value is int &&
+             data.questionId is string && data.questionId.size() < 100 &&
+             data.timestamp is string;
+    }
+
+    function isValidScore(data) {
+      return hasRequiredFields(['userId', 'traits', 'role', 'leaderScore', 'personalityType', 'personalityTypeAr', 'bestRole', 'bestRoleAr', 'description', 'descriptionAr', 'primaryTrait', 'updatedAt']) &&
+             data.userId == request.auth.uid &&
+             data.traits is map &&
+             data.traits.keys().hasAll(['O', 'C', 'E', 'A', 'N']) &&
+             data.role is string &&
+             data.personalityType is string &&
+             data.personalityTypeAr is string &&
+             data.bestRole is string &&
+             data.bestRoleAr is string &&
+             data.description is string &&
+             data.descriptionAr is string &&
+             data.primaryTrait in ['O', 'C', 'E', 'A', 'N'] &&
+             data.leaderScore is number &&
+             data.updatedAt is string;
+    }
+
+    function isValidTeam(data) {
+      return hasRequiredFields(['name', 'minSize', 'maxSize', 'memberCount']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.minSize is int && data.maxSize is int &&
+             data.memberCount is int;
+    }
+
+    function isValidAssignment(data) {
+      return hasRequiredFields(['userId', 'teamId', 'assignedBy', 'timestamp']) &&
+             data.userId is string && data.teamId is string &&
+             data.assignedBy is string && data.timestamp is string;
     }
 
     // ===============================================================
@@ -86,14 +137,15 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'applicant' || isAdmin());
       allow update: if isAuthenticated() && (
         (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || 
-        isAdmin()
+        (isAdmin() && !isSuperAdminDoc(resource.data))
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() && !isSuperAdminDoc(resource.data);
     }
 
     match /questions/{questionId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isValidQuestion(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /responses/{responseId} {
@@ -104,18 +156,20 @@ service cloud.firestore {
 
     match /scores/{userId} {
       allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
-      allow write: if isAdmin() || (isOwner(userId) && hasRequiredFields(['userId']));
+      allow write: if isAdmin() || (isOwner(userId) && isValidScore(request.resource.data));
       allow delete: if isAdmin();
     }
 
     match /teams/{teamId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isValidTeam(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /assignments/{assignmentId} {
       allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && isValidAssignment(request.resource.data);
+      allow delete: if isAdmin();
     }
   }
 }

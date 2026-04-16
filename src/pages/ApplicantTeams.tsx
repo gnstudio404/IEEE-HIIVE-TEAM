@@ -1,30 +1,50 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
-import { Team } from '../types';
-import { Users, Shield, Zap, Target, Info } from 'lucide-react';
+import { Team, UserProfile, UserScore } from '../types';
+import { Users, Shield, Zap, Target, Info, Star, Mail, Building } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function ApplicantTeams() {
   const { profile } = useAuth();
   const { t, language } = useLanguage();
   const [team, setTeam] = useState<Team | null>(null);
+  const [members, setMembers] = useState<UserProfile[]>([]);
+  const [scores, setScores] = useState<Record<string, UserScore>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTeam = async () => {
+    const fetchTeamData = async () => {
       if (!profile?.assignedTeamId) {
         setLoading(false);
         return;
       }
 
       try {
+        // Fetch Team
         const teamDoc = await getDoc(doc(db, 'teams', profile.assignedTeamId));
         if (teamDoc.exists()) {
           setTeam({ id: teamDoc.id, ...teamDoc.data() } as Team);
         }
+
+        // Fetch Members
+        const membersQuery = query(collection(db, 'users'), where('assignedTeamId', '==', profile.assignedTeamId));
+        const membersSnap = await getDocs(membersQuery);
+        const membersData = membersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+        setMembers(membersData);
+
+        // Fetch Scores for members (to identify leader)
+        const scoresData: Record<string, UserScore> = {};
+        for (const member of membersData) {
+          const scoreDoc = await getDoc(doc(db, 'scores', member.uid));
+          if (scoreDoc.exists()) {
+            scoresData[member.uid] = scoreDoc.data() as UserScore;
+          }
+        }
+        setScores(scoresData);
+
       } catch (error) {
         handleFirestoreError(error, OperationType.GET, `teams/${profile.assignedTeamId}`);
       } finally {
@@ -32,7 +52,7 @@ export default function ApplicantTeams() {
       }
     };
 
-    fetchTeam();
+    fetchTeamData();
   }, [profile?.assignedTeamId]);
 
   if (loading) {
@@ -176,6 +196,75 @@ export default function ApplicantTeams() {
           />
         </div>
       </div>
+
+      {/* Team Members List */}
+      <section className="space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+            <Users size={20} />
+          </div>
+          <h2 className="text-2xl font-black text-primary tracking-tighter">
+            {language === 'ar' ? 'أعضاء الخلية' : 'Hive Members'}
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...members].sort((a, b) => (scores[b.uid]?.leaderScore || 0) - (scores[a.uid]?.leaderScore || 0)).map((member, idx) => {
+            const score = scores[member.uid];
+            const isLeader = idx === 0;
+            const isMe = member.uid === profile?.uid;
+
+            return (
+              <div 
+                key={member.uid}
+                className={cn(
+                  "bg-surface-container-lowest rounded-2xl p-6 border transition-all hover:shadow-lg relative overflow-hidden",
+                  isMe ? "ring-2 ring-primary/20" : "border-outline-variant/10",
+                  isLeader && "border-primary/30"
+                )}
+              >
+                {isLeader && (
+                  <div className="absolute top-0 right-0 bg-primary text-white px-3 py-1 rounded-bl-xl text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                    <Star size={8} fill="currentColor" />
+                    {language === 'ar' ? 'القائد' : 'Leader'}
+                  </div>
+                )}
+                
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden mb-4 border-2 border-surface-container shadow-sm">
+                    <img 
+                      src={member.photoURL || "https://picsum.photos/seed/user/200/200"} 
+                      alt={member.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <h4 className="font-bold text-primary truncate w-full">
+                    {member.name} {isMe && (language === 'ar' ? '(أنت)' : '(You)')}
+                  </h4>
+                  <p className="text-[10px] text-on-surface-variant/60 font-medium mb-4 truncate w-full">
+                    {member.department || (language === 'ar' ? 'مهندس' : 'Engineer')}
+                  </p>
+
+                  {score && (
+                    <div className="w-full pt-4 border-t border-outline-variant/5">
+                      <div className="text-[10px] font-black text-secondary uppercase tracking-widest mb-1">
+                        {language === 'ar' ? 'الدور المقترح' : 'Suggested Role'}
+                      </div>
+                      <div className="text-sm font-black text-primary tracking-tight">
+                        {score.personalityType === 'The Leader'
+                          ? (language === 'ar' ? score.personalityTypeAr : score.personalityType)
+                          : (language === 'ar' ? 'عضو فريق' : 'Team Member')
+                        }
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
   );
 }

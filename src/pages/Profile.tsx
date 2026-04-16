@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { UserScore } from '../types';
 import { toast } from 'sonner';
-import { User, Mail, Phone, Building, Camera, Save, Loader2, Globe } from 'lucide-react';
+import { User, Mail, Phone, Building, Camera, Save, Loader2, Globe, Award, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export default function Profile() {
   const { profile, user } = useAuth();
   const { t, language } = useLanguage();
   const [loading, setLoading] = useState(false);
+  const [score, setScore] = useState<UserScore | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -30,6 +32,20 @@ export default function Profile() {
         country: profile.country || '',
         photoURL: profile.photoURL || ''
       });
+
+      if (profile.completedTest) {
+        const fetchScore = async () => {
+          try {
+            const scoreDoc = await getDoc(doc(db, 'scores', profile.uid));
+            if (scoreDoc.exists()) {
+              setScore(scoreDoc.data() as UserScore);
+            }
+          } catch (error) {
+            handleFirestoreError(error, OperationType.GET, `scores/${profile.uid}`);
+          }
+        };
+        fetchScore();
+      }
     }
   }, [profile]);
 
@@ -92,6 +108,26 @@ export default function Profile() {
             
             <h2 className="text-2xl font-black text-primary mt-6 tracking-tight">{profile?.name}</h2>
             <p className="text-on-surface-variant text-sm font-medium uppercase tracking-widest mt-1">{profile?.role}</p>
+            
+            {score && (
+              <div className="mt-6 p-4 bg-primary/5 rounded-2xl border border-primary/10 text-left">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award size={16} className="text-primary" />
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest">
+                    {language === 'ar' ? 'الدور المقترح' : 'Suggested Role'}
+                  </span>
+                </div>
+                <div className="text-lg font-black text-primary tracking-tighter leading-tight">
+                  {score.personalityType === 'The Leader'
+                    ? (language === 'ar' ? score.personalityTypeAr : score.personalityType)
+                    : (language === 'ar' ? 'عضو فريق' : 'Team Member')
+                  }
+                </div>
+                <div className="text-xs font-bold text-secondary mt-1">
+                  {language === 'ar' ? score.bestRoleAr : score.bestRole}
+                </div>
+              </div>
+            )}
             
             <div className="mt-8 pt-8 border-t border-outline-variant/10 space-y-4">
               <div className="flex items-center gap-3 text-sm text-on-surface-variant">
@@ -211,6 +247,50 @@ export default function Profile() {
                   className="w-full px-4 py-3 bg-surface-container-low border-none rounded-2xl focus:ring-2 focus:ring-primary transition-all resize-none"
                 />
               </div>
+
+              {score && (
+                <div className="md:col-span-2 p-6 bg-surface-container-low rounded-3xl border border-outline-variant/10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                      <Sparkles size={20} className="text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-primary tracking-tight">
+                        {language === 'ar' ? 'تحليل الشخصية' : 'Personality Analysis'}
+                      </h3>
+                      <p className="text-xs text-on-surface-variant">
+                        {language === 'ar' ? 'بناءً على نتائج اختبار السمات الخمس الكبرى' : 'Based on your Big Five traits assessment'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-[10px] font-black text-secondary uppercase tracking-widest block mb-1">
+                        {language === 'ar' ? 'الوصف التفصيلي' : 'Detailed Description'}
+                      </span>
+                      <p className="text-sm text-on-surface-variant leading-relaxed italic">
+                        {language === 'ar' ? score.descriptionAr : score.description}
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-5 gap-2 pt-4 border-t border-outline-variant/10">
+                      {Object.entries(score.traits).map(([trait, value]) => (
+                        <div key={trait} className="text-center">
+                          <div className="text-sm font-black text-primary">{(value as number).toFixed(1)}</div>
+                          <div className="text-[8px] font-bold uppercase text-on-surface-variant/70">{trait}</div>
+                          <div className="mt-1 h-1 bg-surface-container-high rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary transition-all duration-1000" 
+                              style={{ width: `${((value as number) / 5) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-outline-variant/10 flex justify-end">

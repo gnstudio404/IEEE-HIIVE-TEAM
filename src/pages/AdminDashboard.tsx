@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
 import { UserProfile, UserScore, Team } from '../types';
 import { Users, CheckCircle2, Clock, Trophy, TrendingUp, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -8,7 +9,8 @@ import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function AdminDashboard() {
-  const { t } = useLanguage();
+  const { user } = useAuth();
+  const { t, language } = useLanguage();
   const [stats, setStats] = useState({
     totalApplicants: 0,
     completedTests: 0,
@@ -17,9 +19,13 @@ export default function AdminDashboard() {
   });
   const [traitDistribution, setTraitDistribution] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [topLeaders, setTopLeaders] = useState<any[]>([]);
+  const [highRiskUsers, setHighRiskUsers] = useState<any[]>([]);
+  const [balancedUsers, setBalancedUsers] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchStats = async () => {
+      if (!user) return;
       try {
         let usersSnap;
         try {
@@ -28,7 +34,7 @@ export default function AdminDashboard() {
           handleFirestoreError(error, OperationType.LIST, 'users');
           return;
         }
-        const users = usersSnap.docs.map(doc => doc.data() as UserProfile);
+        const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
         const applicants = users.filter(u => u.role === 'applicant');
         
         let teamsSnap;
@@ -48,13 +54,48 @@ export default function AdminDashboard() {
         }
 
         const scores = scoresSnap.docs.map(doc => doc.data() as UserScore);
+        const scoresMap = scores.reduce((acc, s) => ({ ...acc, [s.userId]: s }), {} as Record<string, UserScore>);
+
+        // Calculate Top Leaders
+        const sortedLeaders = [...scores]
+          .sort((a, b) => b.leaderScore - a.leaderScore)
+          .slice(0, 5)
+          .map(s => ({
+            ...s,
+            name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
+          }));
+        setTopLeaders(sortedLeaders);
+
+        // Calculate High Risk (Neuroticism > 4.0)
+        const highRisk = scores.filter(s => s.traits.N > 4.0).map(s => ({
+          ...s,
+          name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
+        }));
+        setHighRiskUsers(highRisk);
+
+        // Calculate Balanced Users (All traits between 2.5 and 3.5)
+        const balanced = scores.filter(s => 
+          Object.values(s.traits).every(v => (v as number) >= 2.5 && (v as number) <= 3.5)
+        ).map(s => ({
+          ...s,
+          name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
+        }));
+        setBalancedUsers(balanced);
+
         const distribution: Record<string, number> = {
-          leadership: 0,
-          organization: 0,
-          communication: 0,
-          creativity: 0,
-          analysis: 0,
-          execution: 0
+          O: 0,
+          C: 0,
+          E: 0,
+          A: 0,
+          N: 0
+        };
+
+        const traitLabels: Record<string, string> = {
+          O: language === 'ar' ? 'الانفتاح' : 'Openness',
+          C: language === 'ar' ? 'الضمير' : 'Conscientiousness',
+          E: language === 'ar' ? 'الانبساط' : 'Extraversion',
+          A: language === 'ar' ? 'الوفاق' : 'Agreeableness',
+          N: language === 'ar' ? 'العصابية' : 'Neuroticism'
         };
 
         scores.forEach(score => {
@@ -63,8 +104,8 @@ export default function AdminDashboard() {
           }
         });
 
-        const chartData = Object.entries(distribution).map(([name, value]) => ({
-          name,
+        const chartData = Object.entries(distribution).map(([key, value]) => ({
+          name: traitLabels[key],
           value
         }));
 
@@ -84,7 +125,7 @@ export default function AdminDashboard() {
     };
 
     fetchStats();
-  }, []);
+  }, [user]);
 
   return (
     <div className="space-y-12">
@@ -157,49 +198,137 @@ export default function AdminDashboard() {
       </section>
 
       {/* Trait Distribution Chart Section */}
-      <section className="bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/10 shadow-2xl">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <BarChart3 className="text-primary w-6 h-6" />
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/10 shadow-2xl">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+              <BarChart3 className="text-primary w-6 h-6" />
+            </div>
+            <h3 className="text-2xl font-bold text-primary tracking-tight">{t('admin.traitDist')}</h3>
           </div>
-          <h3 className="text-2xl font-bold text-primary tracking-tight">{t('admin.traitDist')}</h3>
+
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={traitDistribution} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-outline-variant/20" vertical={false} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'currentColor', fontSize: 12 }}
+                  className="text-on-surface-variant"
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: 'currentColor', fontSize: 12 }}
+                  className="text-on-surface-variant"
+                />
+                <Tooltip 
+                  cursor={{ fill: 'currentColor', className: 'text-surface-container-high/20' }}
+                  contentStyle={{ 
+                    backgroundColor: 'var(--color-surface-container-lowest)', 
+                    border: '1px solid var(--color-outline-variant)', 
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  itemStyle={{ color: 'var(--color-on-surface)', fontWeight: 'bold' }}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={40}>
+                  {traitDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill="var(--color-primary)" />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="h-[400px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={traitDistribution} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-outline-variant/20" vertical={false} />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fill: 'currentColor', fontSize: 12 }}
-                className="text-on-surface-variant"
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fill: 'currentColor', fontSize: 12 }}
-                className="text-on-surface-variant"
-              />
-              <Tooltip 
-                cursor={{ fill: 'currentColor', className: 'text-surface-container-high/20' }}
-                contentStyle={{ 
-                  backgroundColor: 'var(--color-surface-container-lowest)', 
-                  border: '1px solid var(--color-outline-variant)', 
-                  borderRadius: '12px',
-                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
-                }}
-                itemStyle={{ color: 'var(--color-on-surface)', fontWeight: 'bold' }}
-              />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={60}>
-                {traitDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill="var(--color-primary)" />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/10 shadow-2xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
+              <Trophy className="text-secondary w-6 h-6" />
+            </div>
+            <h3 className="text-2xl font-bold text-primary tracking-tight">
+              {language === 'ar' ? 'أفضل القادة' : 'Top Leaders'}
+            </h3>
+          </div>
+          <div className="space-y-4">
+            {topLeaders.map((leader, idx) => (
+              <div key={leader.userId} className="flex items-center justify-between p-3 bg-surface-container-low rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
+                    {idx + 1}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-primary">{leader.name}</p>
+                    <p className="text-[10px] text-secondary font-bold uppercase tracking-widest">{leader.personalityType}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-black text-primary">{leader.leaderScore.toFixed(2)}</p>
+                  <p className="text-[10px] text-on-surface-variant font-bold uppercase">{leader.leadershipPotential}</p>
+                </div>
+              </div>
+            ))}
+            {topLeaders.length === 0 && (
+              <p className="text-center text-on-surface-variant py-8 italic">
+                {language === 'ar' ? 'لا توجد بيانات متاحة' : 'No data available'}
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Risk & Balance Section */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/10 shadow-2xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-error/10 flex items-center justify-center">
+              <TrendingUp className="text-error w-6 h-6 rotate-180" />
+            </div>
+            <h3 className="text-2xl font-bold text-primary tracking-tight">
+              {language === 'ar' ? 'مخاطر عالية (عصابية مرتفعة)' : 'High Risk (High Neuroticism)'}
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {highRiskUsers.slice(0, 5).map((u) => (
+              <div key={u.userId} className="flex items-center justify-between p-3 border border-error/10 rounded-xl bg-error/5">
+                <span className="text-sm font-bold text-primary">{u.name}</span>
+                <span className="text-xs font-black text-error">N: {u.traits.N.toFixed(1)}</span>
+              </div>
+            ))}
+            {highRiskUsers.length === 0 && (
+              <p className="text-center text-on-surface-variant py-8 italic">
+                {language === 'ar' ? 'لا يوجد مستخدمون ذوو مخاطر عالية' : 'No high risk users found'}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-surface-container-lowest rounded-2xl p-8 border border-outline-variant/10 shadow-2xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <Users className="text-emerald-600 w-6 h-6" />
+            </div>
+            <h3 className="text-2xl font-bold text-primary tracking-tight">
+              {language === 'ar' ? 'مستخدمون متوازنون' : 'Balanced Users'}
+            </h3>
+          </div>
+          <div className="space-y-3">
+            {balancedUsers.slice(0, 5).map((u) => (
+              <div key={u.userId} className="flex items-center justify-between p-3 border border-emerald-100 rounded-xl bg-emerald-50">
+                <span className="text-sm font-bold text-primary">{u.name}</span>
+                <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">Balanced Profile</span>
+              </div>
+            ))}
+            {balancedUsers.length === 0 && (
+              <p className="text-center text-on-surface-variant py-8 italic">
+                {language === 'ar' ? 'لا يوجد مستخدمون متوازنون' : 'No balanced users found'}
+              </p>
+            )}
+          </div>
         </div>
       </section>
 

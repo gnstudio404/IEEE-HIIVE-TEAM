@@ -139,14 +139,36 @@ export default function ApplicantHome() {
               </span>
             </div>
             <h3 className="text-xl font-bold text-primary mb-2">
-              {language === 'ar' ? 'اختبار MCQ' : 'MCQ Test'}
+              {language === 'ar' ? 'اختبار الشخصية' : 'Personality Test'}
             </h3>
             <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
-              {language === 'ar' ? 'التقييم الفني للكفاءة الهندسية.' : 'Technical assessment for engineering proficiency.'}
+              {language === 'ar' ? 'تقييم السمات الشخصية الخمس الكبرى.' : 'Big Five personality traits assessment.'}
             </p>
             {profile?.completedTest ? (
-              <div className="flex items-center gap-2 text-primary font-bold text-sm">
-                <span>{language === 'ar' ? 'مكتمل' : 'Completed'}</span>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-primary font-bold text-sm">
+                  <CheckCircle2 size={16} />
+                  <span>{language === 'ar' ? 'مكتمل' : 'Completed'}</span>
+                </div>
+                {score && (
+                  <div className="pt-4 border-t border-surface-container-high">
+                    <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-1">
+                      {language === 'ar' ? 'دورك المقترح:' : 'Your Suggested Role:'}
+                    </div>
+                    <div className="text-2xl font-black text-primary tracking-tighter mb-2">
+                      {score.personalityType === 'The Leader' 
+                        ? (language === 'ar' ? score.personalityTypeAr : score.personalityType)
+                        : (language === 'ar' ? 'عضو فريق' : 'Team Member')
+                      }
+                    </div>
+                    <div className="text-sm font-bold text-secondary mb-2">
+                      {language === 'ar' ? score.bestRoleAr : score.bestRole}
+                    </div>
+                    <p className="text-xs text-on-surface-variant leading-relaxed italic">
+                      {language === 'ar' ? score.descriptionAr : score.description}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <Link 

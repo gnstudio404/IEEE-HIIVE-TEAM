@@ -17,22 +17,32 @@ export default function AdminApplicants() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'completed' | 'pending'>('all');
+  const [filter, setFilter] = useState<'all' | 'completed' | 'pending' | 'blocked'>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [blockingId, setBlockingId] = useState<string | null>(null);
+  const [roleLoadingId, setRoleLoadingId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
   const downloadExcel = () => {
-    const data = filteredApplicants.map(u => ({
-      [language === 'ar' ? 'الاسم' : 'Name']: u.name,
-      [language === 'ar' ? 'البريد الإلكتروني' : 'Email']: u.email,
-      [language === 'ar' ? 'الهاتف' : 'Phone']: u.phone || 'N/A',
-      [language === 'ar' ? 'القسم' : 'Department']: u.department || 'N/A',
-      [language === 'ar' ? 'الدولة' : 'Country']: u.country || 'N/A',
-      [language === 'ar' ? 'الدور' : 'Role']: u.role,
-      [language === 'ar' ? 'حالة الاختبار' : 'Test Status']: u.completedTest ? (language === 'ar' ? 'مكتمل' : 'Completed') : (language === 'ar' ? 'معلق' : 'Pending'),
-      [language === 'ar' ? 'الفريق' : 'Team']: teams.find(t => t.id === u.assignedTeamId)?.name || (language === 'ar' ? 'بدون فريق' : 'No Team'),
-      [language === 'ar' ? 'تاريخ التسجيل' : 'Created At']: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'
-    }));
+    const data = filteredApplicants.map(u => {
+      const score = scores[u.uid];
+      return {
+        [language === 'ar' ? 'الاسم' : 'Name']: u.name,
+        [language === 'ar' ? 'البريد الإلكتروني' : 'Email']: u.email,
+        [language === 'ar' ? 'الهاتف' : 'Phone']: u.phone || 'N/A',
+        [language === 'ar' ? 'القسم' : 'Department']: u.department || 'N/A',
+        [language === 'ar' ? 'الدولة' : 'Country']: u.country || 'N/A',
+        [language === 'ar' ? 'الدور' : 'Role']: u.role,
+        [language === 'ar' ? 'حالة الحظر' : 'Block Status']: u.isBlocked ? (language === 'ar' ? 'محظور' : 'Blocked') : (language === 'ar' ? 'نشط' : 'Active'),
+        [language === 'ar' ? 'حالة الاختبار' : 'Test Status']: u.completedTest ? (language === 'ar' ? 'مكتمل' : 'Completed') : (language === 'ar' ? 'معلق' : 'Pending'),
+        [language === 'ar' ? 'الدور المقترح' : 'Suggested Role']: score ? (language === 'ar' ? score.personalityTypeAr : score.personalityType) : 'N/A',
+        [language === 'ar' ? 'المهمة الأنسب' : 'Best Role']: score ? (language === 'ar' ? score.bestRoleAr : score.bestRole) : 'N/A',
+        [language === 'ar' ? 'درجة القيادة' : 'Leader Score']: score?.leaderScore?.toFixed(2) || 'N/A',
+        [language === 'ar' ? 'إمكانية القيادة' : 'Leadership Potential']: score?.leadershipPotential || 'N/A',
+        [language === 'ar' ? 'الفريق' : 'Team']: teams.find(t => t.id === u.assignedTeamId)?.name || (language === 'ar' ? 'بدون فريق' : 'No Team'),
+        [language === 'ar' ? 'تاريخ التسجيل' : 'Created At']: u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(data);
     
@@ -44,7 +54,10 @@ export default function AdminApplicants() {
       { wch: 20 }, // Department
       { wch: 15 }, // Country
       { wch: 12 }, // Role
+      { wch: 15 }, // Block Status
       { wch: 15 }, // Test Status
+      { wch: 15 }, // Suggested Role
+      { wch: 15 }, // Leader Score
       { wch: 20 }, // Team
       { wch: 15 }, // Created At
     ];
@@ -56,8 +69,12 @@ export default function AdminApplicants() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const SUPER_ADMIN_EMAIL = 'omarwork1011@gmail.com';
 
   const fetchData = async () => {
     try {
@@ -150,7 +167,63 @@ export default function AdminApplicants() {
     }
   };
 
+  const handleToggleRole = async (userId: string, currentRole: string) => {
+    const targetUser = applicants.find(u => u.uid === userId);
+    if (targetUser?.email === SUPER_ADMIN_EMAIL) {
+      toast.error("This is the main admin account and cannot be modified");
+      return;
+    }
+
+    if (userId === user?.uid) {
+      toast.error("You cannot change your own role");
+      return;
+    }
+
+    try {
+      setRoleLoadingId(userId);
+      const newRole = currentRole === 'admin' ? 'applicant' : 'admin';
+      await updateDoc(doc(db, 'users', userId), {
+        role: newRole
+      });
+      toast.success(newRole === 'admin' ? "User promoted to admin" : "User demoted to applicant");
+      fetchData();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
+      toast.error("Failed to update user role");
+    } finally {
+      setRoleLoadingId(null);
+    }
+  };
+
+  const handleToggleBlock = async (userId: string, currentStatus: boolean) => {
+    const targetUser = applicants.find(u => u.uid === userId);
+    if (targetUser?.email === SUPER_ADMIN_EMAIL) {
+      toast.error("This is the main admin account and cannot be blocked");
+      return;
+    }
+
+    try {
+      setBlockingId(userId);
+      await updateDoc(doc(db, 'users', userId), {
+        isBlocked: !currentStatus
+      });
+      toast.success(currentStatus ? "User unblocked successfully" : "User blocked successfully");
+      fetchData();
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
+      toast.error("Failed to update block status");
+    } finally {
+      setBlockingId(null);
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
+    const targetUser = applicants.find(u => u.uid === userId);
+    if (targetUser?.email === SUPER_ADMIN_EMAIL) {
+      toast.error("This is the main admin account and cannot be deleted");
+      return;
+    }
+
     try {
       const user = applicants.find(u => u.uid === userId);
       const batch = writeBatch(db);
@@ -192,7 +265,8 @@ export default function AdminApplicants() {
                          u.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'all' || 
                          (filter === 'completed' && u.completedTest) || 
-                         (filter === 'pending' && !u.completedTest);
+                         (filter === 'pending' && !u.completedTest) ||
+                         (filter === 'blocked' && u.isBlocked);
     return matchesSearch && matchesFilter;
   });
 
@@ -223,7 +297,7 @@ export default function AdminApplicants() {
               />
             </div>
             <div className="flex bg-surface-container-low p-1 rounded-xl">
-              {(['all', 'completed', 'pending'] as const).map((f) => (
+              {(['all', 'completed', 'pending', 'blocked'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
@@ -232,7 +306,7 @@ export default function AdminApplicants() {
                     filter === f ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-primary"
                   )}
                 >
-                  {t(`admin.${f}`)}
+                  {f === 'blocked' ? (language === 'ar' ? 'المحظورين' : 'Blocked') : t(`admin.${f}`)}
                 </button>
               ))}
             </div>
@@ -244,7 +318,7 @@ export default function AdminApplicants() {
             <thead className="bg-surface-container-low">
               <tr>
                 <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.name')}</th>
-                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.role')}</th>
+                <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{language === 'ar' ? 'الدور المقترح' : 'Suggested Role'}</th>
                 <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.status')}</th>
                 <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">{t('admin.team')}</th>
                 <th className="px-8 py-4 text-xs font-bold uppercase tracking-widest text-on-surface-variant/70 text-right">{t('admin.actions')}</th>
@@ -253,6 +327,7 @@ export default function AdminApplicants() {
             <tbody className="divide-y divide-outline-variant/10">
               {filteredApplicants.map((u) => {
                 const team = teams.find(t => t.id === u.assignedTeamId);
+                const score = scores[u.uid];
                 return (
                   <tr key={u.uid} className="hover:bg-surface-container/30 transition-colors">
                     <td className="px-8 py-5">
@@ -276,12 +351,23 @@ export default function AdminApplicants() {
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      <span className={cn(
-                        "font-bold text-[10px] uppercase tracking-tighter px-2 py-0.5 rounded",
-                        u.role === 'admin' ? "bg-primary-container/20 text-primary-container" : "bg-surface-container-high text-on-surface-variant"
-                      )}>
-                        {u.role === 'admin' ? t('admin.leadArchitect') : t('admin.contributor')}
-                      </span>
+                      {score ? (
+                        <div className="flex flex-col">
+                          <span className="font-black text-primary text-sm tracking-tighter">
+                            {score.personalityType === 'The Leader'
+                              ? (language === 'ar' ? score.personalityTypeAr : score.personalityType)
+                              : (language === 'ar' ? 'عضو فريق' : 'Team Member')
+                            }
+                          </span>
+                          <span className="text-[10px] text-secondary font-bold uppercase tracking-widest">
+                            {language === 'ar' ? score.personalityTypeAr : score.personalityType}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-on-surface-variant/50 italic">
+                          {language === 'ar' ? 'لم يكتمل' : 'Not Completed'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-8 py-5">
                       <div className={cn(
@@ -306,12 +392,46 @@ export default function AdminApplicants() {
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleToggleRole(u.uid, u.role)}
+                          disabled={u.uid === user?.uid || roleLoadingId === u.uid || u.email === SUPER_ADMIN_EMAIL}
+                          className={cn(
+                            "p-2 rounded-lg transition-all",
+                            u.role === 'admin' 
+                              ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                              : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest",
+                            u.email === SUPER_ADMIN_EMAIL && "hidden"
+                          )}
+                          title={u.email === SUPER_ADMIN_EMAIL ? (language === 'ar' ? 'حساب المسؤول الرئيسي' : 'Main Admin Account') : (u.role === 'admin' ? (language === 'ar' ? 'تنزيل لمرتبة مستخدم' : 'Demote to Applicant') : (language === 'ar' ? 'تعيين كمسؤول' : 'Promote to Admin'))}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {u.role === 'admin' ? 'person_remove' : 'admin_panel_settings'}
+                          </span>
+                        </button>
+
+                        <button 
+                          onClick={() => handleToggleBlock(u.uid, !!u.isBlocked)}
+                          disabled={u.uid === user?.uid || blockingId === u.uid || u.email === SUPER_ADMIN_EMAIL}
+                          className={cn(
+                            "p-2 rounded-lg transition-all",
+                            u.isBlocked 
+                              ? "bg-emerald-100 text-emerald-600 hover:bg-emerald-200" 
+                              : "bg-amber-100 text-amber-600 hover:bg-amber-200",
+                            u.email === SUPER_ADMIN_EMAIL && "hidden"
+                          )}
+                          title={u.email === SUPER_ADMIN_EMAIL ? (language === 'ar' ? 'حساب المسؤول الرئيسي' : 'Main Admin Account') : (u.isBlocked ? (language === 'ar' ? 'إلغاء الحظر' : 'Unblock') : (language === 'ar' ? 'حظر' : 'Block'))}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {u.isBlocked ? 'person_check' : 'block'}
+                          </span>
+                        </button>
+
                         {deletingId === u.uid ? (
                           <button onClick={() => handleDeleteUser(u.uid)} className="text-error hover:scale-110 transition-transform">
                             <span className="material-symbols-outlined text-[20px]">delete_forever</span>
                           </button>
                         ) : (
-                          <button onClick={() => setDeletingId(u.uid)} disabled={u.uid === user?.uid} className="text-on-surface-variant hover:text-error transition-colors disabled:opacity-0">
+                          <button onClick={() => setDeletingId(u.uid)} disabled={u.uid === user?.uid || u.email === SUPER_ADMIN_EMAIL} className={cn("text-on-surface-variant hover:text-error transition-colors disabled:opacity-0", u.email === SUPER_ADMIN_EMAIL && "hidden")}>
                             <span className="material-symbols-outlined text-[20px]">delete</span>
                           </button>
                         )}
@@ -385,15 +505,61 @@ export default function AdminApplicants() {
                     {selectedUser.department || 'N/A'}
                   </p>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
-                    {language === 'ar' ? 'الدولة' : 'Country'}
-                  </p>
-                  <p className="font-bold text-primary flex items-center gap-2">
-                    <Globe size={14} />
-                    {selectedUser.country || 'N/A'}
-                  </p>
-                </div>
+                
+                {scores[selectedUser.uid] && (
+                  <div className="col-span-2 p-6 bg-surface-container-low rounded-2xl">
+                    <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest mb-4">
+                      {language === 'ar' ? 'نتائج اختبار الشخصية' : 'Personality Test Results'}
+                    </p>
+                    <div className="grid grid-cols-5 gap-2">
+                      {Object.entries(scores[selectedUser.uid].traits).map(([trait, value]) => (
+                        <div key={trait} className="text-center">
+                          <div className="text-lg font-black text-primary">{(value as number).toFixed(1)}</div>
+                          <div className="text-[8px] font-bold uppercase text-on-surface-variant/70">{trait}</div>
+                          <div className="mt-1 h-1 bg-surface-container-high rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-primary transition-all duration-1000" 
+                              style={{ width: `${((value as number) / 5) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-outline-variant/10 flex justify-between items-center">
+                      <div>
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">
+                          {language === 'ar' ? 'الدور المقترح' : 'Suggested Role'}
+                        </span>
+                        <span className="text-xl font-black text-primary tracking-tighter">
+                          {scores[selectedUser.uid].personalityType === 'The Leader'
+                            ? (language === 'ar' ? scores[selectedUser.uid].personalityTypeAr : scores[selectedUser.uid].personalityType)
+                            : (language === 'ar' ? 'عضو فريق' : 'Team Member')
+                          }
+                        </span>
+                        <span className="text-xs font-bold text-secondary block mt-1">
+                          {language === 'ar' ? scores[selectedUser.uid].personalityTypeAr : scores[selectedUser.uid].personalityType}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] font-bold text-secondary uppercase tracking-widest block">
+                          {language === 'ar' ? 'درجة القيادة' : 'Leader Score'}
+                        </span>
+                        <span className="text-xl font-black text-primary tracking-tighter">
+                          {scores[selectedUser.uid].leaderScore.toFixed(2)}
+                        </span>
+                        <div className={cn(
+                          "text-[10px] font-black px-2 py-0.5 rounded-full inline-block mt-1",
+                          scores[selectedUser.uid].leadershipPotential === 'High' ? "bg-emerald-100 text-emerald-700" :
+                          scores[selectedUser.uid].leadershipPotential === 'Medium' ? "bg-amber-100 text-amber-700" :
+                          "bg-slate-100 text-slate-700"
+                        )}>
+                          {scores[selectedUser.uid].leadershipPotential}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="col-span-2 space-y-1">
                   <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
                     {language === 'ar' ? 'نبذة شخصية' : 'Bio'}

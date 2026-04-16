@@ -43,7 +43,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const path = `users/${user.uid}`;
     const unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
       if (docSnap.exists()) {
-        setProfile(docSnap.data() as UserProfile);
+        const profileData = docSnap.data() as UserProfile;
+        if (profileData.isBlocked) {
+          auth.signOut();
+          setProfile(null);
+          setUser(null);
+        } else {
+          setProfile(profileData);
+        }
       }
       setLoading(false);
     }, (error) => {

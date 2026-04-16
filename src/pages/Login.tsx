@@ -22,6 +22,19 @@ export default function Login() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      
+      // Check if blocked immediately after sign in
+      const user = auth.currentUser;
+      if (user) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists() && userDoc.data().isBlocked) {
+          await auth.signOut();
+          toast.error(language === 'ar' ? 'تم حظر حسابك. يرجى التواصل مع الإدارة.' : 'Your account has been blocked. Please contact administration.');
+          setLoading(false);
+          return;
+        }
+      }
+
       toast.success(language === 'ar' ? 'مرحباً بعودتك!' : 'Welcome back!');
       navigate('/');
     } catch (error: any) {
@@ -65,6 +78,14 @@ export default function Login() {
           return;
         }
       } else {
+        // Check if blocked
+        if (userDoc.data().isBlocked) {
+          await auth.signOut();
+          toast.error(language === 'ar' ? 'تم حظر حسابك. يرجى التواصل مع الإدارة.' : 'Your account has been blocked. Please contact administration.');
+          setGoogleLoading(false);
+          return;
+        }
+
         // Sync name and photoURL for existing users
         try {
           await setDoc(doc(db, 'users', user.uid), {

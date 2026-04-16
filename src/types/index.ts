@@ -11,30 +11,24 @@ export interface UserProfile {
   country?: string;
   role: UserRole;
   completedTest: boolean;
+  isBlocked?: boolean;
   assignedTeamId?: string | null;
   createdAt: string;
 }
 
-export interface DimensionWeights {
-  leadership: number;
-  organization: number;
-  communication: number;
-  creativity: number;
-  analysis: number;
-  execution: number;
-}
-
-export interface QuestionOption {
-  text: string;
-  textAr?: string;
-  weights: DimensionWeights;
+export interface Traits {
+  O: number;
+  C: number;
+  E: number;
+  A: number;
+  N: number;
 }
 
 export interface Question {
   id: string;
   text: string;
   textAr?: string;
-  options: QuestionOption[];
+  trait: keyof Traits;
   active: boolean;
   order: number;
 }
@@ -43,20 +37,43 @@ export interface TestResponse {
   id?: string;
   userId: string;
   questionId: string;
-  selectedOptionIndex: number;
+  value: number;
   timestamp: string;
+}
+
+export type UserRoleType = 
+  | 'The Leader' 
+  | 'The Strategist' 
+  | 'The Executor' 
+  | 'The Thinker' 
+  | 'The Supporter' 
+  | 'The Challenger' 
+  | 'The Stabilizer' 
+  | 'The Sensitive Contributor' 
+  | 'General Contributor';
+
+export interface PersonalityProfile {
+  type: string;
+  type_ar: string;
+  bestRole: string;
+  bestRole_ar: string;
+  description: string;
+  description_ar: string;
 }
 
 export interface UserScore {
   userId: string;
-  leadership: number;
-  organization: number;
-  communication: number;
-  creativity: number;
-  analysis: number;
-  execution: number;
-  primaryTrait: keyof DimensionWeights;
-  secondaryTrait: keyof DimensionWeights;
+  traits: Traits;
+  role: string; // Keep for backward compatibility or general type
+  personalityType: string;
+  personalityTypeAr: string;
+  bestRole: string;
+  bestRoleAr: string;
+  description: string;
+  descriptionAr: string;
+  leaderScore: number;
+  leadershipPotential: 'High' | 'Medium' | 'Low';
+  primaryTrait?: string; // For dashboard charts
   updatedAt: string;
 }
 

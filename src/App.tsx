@@ -16,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminQuestions from './pages/AdminQuestions';
 import AdminTeams from './pages/AdminTeams';
 import AdminApplicants from './pages/AdminApplicants';
+import AdminTeamDetails from './pages/AdminTeamDetails';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
@@ -48,6 +49,7 @@ function AppRoutes() {
         <Route path="admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
         <Route path="admin/questions" element={<ProtectedRoute adminOnly><AdminQuestions /></ProtectedRoute>} />
         <Route path="admin/teams" element={<ProtectedRoute adminOnly><AdminTeams /></ProtectedRoute>} />
+        <Route path="admin/teams/:teamId" element={<ProtectedRoute adminOnly><AdminTeamDetails /></ProtectedRoute>} />
         <Route path="admin/applicants" element={<ProtectedRoute adminOnly><AdminApplicants /></ProtectedRoute>} />
       </Route>
     </Routes>
