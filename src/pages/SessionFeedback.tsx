@@ -90,7 +90,7 @@ export default function SessionFeedback() {
             onClick={() => setRatings({ ...ratings, [key]: star })}
             className={cn(
               "p-2 transition-all duration-300 hover:scale-125",
-              ratings[key] >= star ? "text-yellow-400 fill-yellow-400" : "text-outline-variant hover:text-yellow-200"
+              ratings[key] >= star ? "text-yellow-400 fill-yellow-400" : "text-on-surface/20 hover:text-yellow-500/40"
             )}
           >
             <Star size={32} className={cn(ratings[key] >= star && "fill-current")} />

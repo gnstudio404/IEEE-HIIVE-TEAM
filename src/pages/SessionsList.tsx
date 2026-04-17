@@ -4,7 +4,7 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Session, SessionQuizResult } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
-import { Video, Calendar, Clock, ExternalLink, Play, MapPin, ChevronLeft, Plus, Settings, ClipboardCheck, CheckCircle2 } from 'lucide-react';
+import { Video, Calendar, Clock, ExternalLink, Play, MapPin, ChevronLeft, Plus, Settings, ClipboardCheck, CheckCircle2, Star } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -187,15 +187,21 @@ export default function SessionsList() {
                               <span>{quizResults[session.id].score}/{quizResults[session.id].totalQuestions}</span>
                            </div>
                            {feedbacks[session.id] ? (
-                             <span className="text-[10px] font-black uppercase text-secondary">
-                               {language === 'ar' ? 'تم التقييم' : 'Feedback Sent'}
-                             </span>
+                             <div className="flex items-center gap-1.5 bg-secondary/10 text-secondary px-3 py-1.5 rounded-xl">
+                               <CheckCircle2 size={14} />
+                               <span className="text-[10px] font-black uppercase">
+                                 {language === 'ar' ? 'تم التقييم' : 'Feedback Sent'}
+                               </span>
+                             </div>
                            ) : (
                               <button 
                                 onClick={() => navigate(`/sessions/${session.id}/feedback`)}
-                                className="text-[10px] font-black uppercase text-error hover:underline"
+                                className="flex items-center gap-1.5 bg-error/10 text-error px-4 py-2 rounded-xl border border-error/20 hover:bg-error/20 transition-all shadow-lg shadow-error/5"
                               >
-                                {language === 'ar' ? 'قيم الآن' : 'Rate Now'}
+                                <Star size={14} className="fill-error" />
+                                <span className="text-[10px] font-black uppercase">
+                                  {language === 'ar' ? 'قيم الآن' : 'Rate Now'}
+                                </span>
                               </button>
                            )}
                         </div>
@@ -211,24 +217,29 @@ export default function SessionsList() {
                         </button>
                       )
                     ) : (
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="text-on-surface-variant/30 font-black uppercase tracking-widest text-xs border border-outline-variant/10 px-6 py-4 rounded-2xl bg-surface-container-high/20">
-                           {language === 'ar' ? 'انتهى السيشن' : 'Ended'}
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="text-on-surface-variant/30 font-black uppercase tracking-widest text-xs border border-outline-variant/10 px-6 py-4 rounded-2xl bg-surface-container-high/20">
+                             {language === 'ar' ? 'انتهى السيشن' : 'Ended'}
+                          </div>
+                          {!feedbacks[session.id] ? (
+                            <button 
+                              onClick={() => navigate(`/sessions/${session.id}/feedback`)}
+                              className="flex items-center gap-1.5 bg-error/10 text-error px-4 py-2 rounded-xl border border-error/20 hover:bg-error/20 transition-all shadow-lg shadow-error/5"
+                            >
+                              <Star size={14} className="fill-error" />
+                              <span className="text-[10px] font-black uppercase">
+                                {language === 'ar' ? 'قيم الآن' : 'Rate Now'}
+                              </span>
+                            </button>
+                          ) : (
+                             <div className="flex items-center gap-1.5 bg-secondary/10 text-secondary px-3 py-1.5 rounded-xl">
+                               <CheckCircle2 size={14} />
+                               <span className="text-[10px] font-black uppercase">
+                                 {language === 'ar' ? 'تم التقييم' : 'Feedback Sent'}
+                               </span>
+                             </div>
+                          )}
                         </div>
-                        {!feedbacks[session.id] && (
-                          <button 
-                            onClick={() => navigate(`/sessions/${session.id}/feedback`)}
-                            className="text-[10px] font-black uppercase text-error hover:underline"
-                          >
-                            {language === 'ar' ? 'قيم الآن' : 'Rate Now'}
-                          </button>
-                        )}
-                        {feedbacks[session.id] && (
-                           <span className="text-[10px] font-black uppercase text-secondary">
-                             {language === 'ar' ? 'تم التقييم' : 'Feedback Sent'}
-                           </span>
-                        )}
-                      </div>
                     )
                   ) : session.link ? (
                     <a 
