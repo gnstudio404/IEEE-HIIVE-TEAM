@@ -112,7 +112,8 @@
         "endTime": { "type": "string", "format": "date-time" },
         "link": { "type": "string" },
         "active": { "type": "boolean" },
-        "hasQuiz": { "type": "boolean" }
+        "hasQuiz": { "type": "boolean" },
+        "imageUrl": { "type": "string" }
       },
       "required": ["title", "date", "endTime", "active"]
     },

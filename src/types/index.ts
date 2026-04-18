@@ -106,6 +106,7 @@ export interface Session {
   type: 'live' | 'recorded' | 'workshop';
   active: boolean;
   hasQuiz: boolean;
+  imageUrl?: string;
   createdAt: string;
 }
 

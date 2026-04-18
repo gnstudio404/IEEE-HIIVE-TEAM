@@ -29,7 +29,8 @@ export default function AdminSessions() {
     link: '',
     type: 'live' as const,
     active: true,
-    hasQuiz: false
+    hasQuiz: false,
+    imageUrl: ''
   });
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function AdminSessions() {
   const resetForm = () => {
     setFormData({ 
       title: '', titleAr: '', description: '', descriptionAr: '', 
-      date: '', durationMinutes: 60, endTime: '', link: '', type: 'live', active: true, hasQuiz: false 
+      date: '', durationMinutes: 60, endTime: '', link: '', type: 'live', active: true, hasQuiz: false, imageUrl: ''
     });
     setIsAdding(false);
     setEditingSession(null);
@@ -91,7 +92,8 @@ export default function AdminSessions() {
       link: session.link || '',
       type: session.type,
       active: session.active,
-      hasQuiz: session.hasQuiz || false
+      hasQuiz: session.hasQuiz || false,
+      imageUrl: session.imageUrl || ''
     });
     setEditingSession(session);
     setIsAdding(true);
@@ -349,17 +351,29 @@ export default function AdminSessions() {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-xs font-black text-secondary uppercase tracking-[0.2em]">Meeting / Playback Link</label>
-              <div className="relative">
-                <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant" size={20} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-xs font-black text-secondary uppercase tracking-[0.2em]">{language === 'ar' ? 'رابط الصورة' : 'Image URL'}</label>
                 <input 
                   type="url"
-                  placeholder="https://zoom.it/meeting-id"
-                  className="w-full bg-surface-container-high p-4 pl-12 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium"
-                  value={formData.link}
-                  onChange={e => setFormData({...formData, link: e.target.value})}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full bg-surface-container-high p-4 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium"
+                  value={formData.imageUrl}
+                  onChange={e => setFormData({...formData, imageUrl: e.target.value})}
                 />
+              </div>
+              <div className="space-y-3">
+                <label className="text-xs font-black text-secondary uppercase tracking-[0.2em]">Meeting / Playback Link</label>
+                <div className="relative">
+                  <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant" size={20} />
+                  <input 
+                    type="url"
+                    placeholder="https://zoom.it/meeting-id"
+                    className="w-full bg-surface-container-high p-4 pl-12 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium"
+                    value={formData.link}
+                    onChange={e => setFormData({...formData, link: e.target.value})}
+                  />
+                </div>
               </div>
             </div>
 
