@@ -22,6 +22,7 @@ import AdminSessionQuiz from './pages/AdminSessionQuiz';
 import SessionsList from './pages/SessionsList';
 import SessionQuiz from './pages/SessionQuiz';
 import SessionFeedback from './pages/SessionFeedback';
+import SessionDetails from './pages/SessionDetails';
 import Layout from './components/Layout';
 
 const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode, adminOnly?: boolean }) => {
@@ -50,6 +51,7 @@ function AppRoutes() {
         <Route path="teams" element={<ApplicantTeams />} />
         <Route path="profile" element={<Profile />} />
         <Route path="sessions" element={<SessionsList />} />
+        <Route path="sessions/:sessionId" element={<ProtectedRoute><SessionDetails /></ProtectedRoute>} />
         <Route path="sessions/:sessionId/quiz" element={<ProtectedRoute><SessionQuiz /></ProtectedRoute>} />
         <Route path="sessions/:sessionId/feedback" element={<ProtectedRoute><SessionFeedback /></ProtectedRoute>} />
         

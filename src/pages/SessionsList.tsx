@@ -17,7 +17,6 @@ export default function SessionsList() {
   const [loading, setLoading] = useState(true);
   const [quizResults, setQuizResults] = useState<Record<string, SessionQuizResult>>({});
   const [feedbacks, setFeedbacks] = useState<Record<string, boolean>>({});
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
 
   useEffect(() => {
     fetchSessions();
@@ -130,7 +129,7 @@ export default function SessionsList() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               className="bg-surface-container-lowest rounded-3xl hive-shadow relative overflow-hidden group hover:ring-2 ring-primary/20 transition-all border border-outline-variant/10 cursor-pointer flex flex-col"
-              onClick={() => setSelectedSession(session)}
+              onClick={() => navigate(`/sessions/${session.id}`)}
             >
               {session.imageUrl && (
                 <div className="w-full overflow-hidden relative aspect-[4/5] max-h-[500px] bg-surface-container-low">
@@ -285,166 +284,6 @@ export default function SessionsList() {
               </div>
             </motion.div>
           ))}
-
-          <AnimatePresence>
-            {selectedSession && (
-              <div 
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10"
-                onClick={() => setSelectedSession(null)}
-              >
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                />
-                
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-surface-container-lowest w-full max-w-2xl rounded-[40px] hive-shadow relative overflow-hidden flex flex-col max-h-[90vh] border-t-8 border-primary"
-                >
-                  <button 
-                    onClick={() => setSelectedSession(null)}
-                    className="absolute top-6 right-6 p-2 bg-surface-container-high hover:bg-surface-container-highest rounded-full transition-all text-on-surface-variant z-10"
-                  >
-                    <X size={24} />
-                  </button>
-
-                  <div className="p-6 md:p-10 space-y-8 overflow-y-auto">
-                    {selectedSession.imageUrl && (
-                      <div className="w-full aspect-[4/5] max-h-[600px] rounded-3xl overflow-hidden mb-8 shadow-2xl bg-surface-container-low">
-                        <img 
-                          src={selectedSession.imageUrl} 
-                          alt={language === 'ar' ? selectedSession.titleAr : selectedSession.title}
-                          referrerPolicy="no-referrer"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    )}
-                    <header className="space-y-4">
-                      <div className={cn(
-                        "w-16 h-16 rounded-2xl flex items-center justify-center",
-                        selectedSession.type === 'live' ? "bg-error/10 text-error" : 
-                        selectedSession.type === 'recorded' ? "bg-primary/10 text-primary" : "bg-tertiary/10 text-tertiary"
-                      )}>
-                        {selectedSession.type === 'recorded' ? <Play size={32} /> : <Video size={32} />}
-                      </div>
-                      
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                           <span className={cn(
-                             "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
-                             selectedSession.type === 'live' ? "bg-error text-white" : 
-                             selectedSession.type === 'recorded' ? "bg-primary-container text-primary" : "bg-tertiary-container text-tertiary"
-                           )}>
-                             {selectedSession.type === 'live' ? (language === 'ar' ? 'بث مباشر' : 'Live') : 
-                              selectedSession.type === 'recorded' ? (language === 'ar' ? 'مسجل' : 'Recorded') : 
-                              (language === 'ar' ? 'ورشة عمل' : 'Workshop')}
-                           </span>
-                           {isSessionUpcoming(selectedSession) && (
-                             <span className="px-3 py-1 rounded-full bg-surface-container-high text-on-surface-variant text-[10px] font-black uppercase tracking-widest">
-                               {language === 'ar' ? 'قريباً' : 'Upcoming'}
-                             </span>
-                           )}
-                        </div>
-                        <h2 className="text-3xl md:text-4xl font-black text-primary tracking-tighter leading-none">
-                          {language === 'ar' ? selectedSession.titleAr : selectedSession.title}
-                        </h2>
-                      </div>
-                    </header>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-surface-container-low p-6 rounded-3xl">
-                      <div className="flex items-center gap-3">
-                        <div className="p-3 bg-primary/10 rounded-2xl text-primary">
-                          <Calendar size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase text-on-surface-variant/50">{language === 'ar' ? 'التاريخ' : 'Date'}</p>
-                          <p className="font-bold">
-                            {new Date(selectedSession.date).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="p-3 bg-primary/10 rounded-2xl text-primary">
-                          <Clock size={20} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase text-on-surface-variant/50">{language === 'ar' ? 'الوقت' : 'Time'}</p>
-                          <p className="font-bold">
-                            {new Date(selectedSession.date).toLocaleTimeString(language === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <h3 className="text-xs font-black text-secondary uppercase tracking-widest flex items-center gap-2">
-                        <Info size={14} />
-                        {language === 'ar' ? 'عن هذه الجلسة' : 'About this session'}
-                      </h3>
-                      <div className="bg-surface-container-low/50 p-6 rounded-3xl">
-                        <p className={cn(
-                          "text-on-surface-variant text-lg leading-relaxed whitespace-pre-wrap",
-                          language === 'ar' && "text-right"
-                        )}>
-                          {language === 'ar' ? selectedSession.descriptionAr : selectedSession.description}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="pt-6 border-t border-outline-variant/10">
-                      {isSessionFinished(selectedSession) ? (
-                        selectedSession.hasQuiz ? (
-                          quizResults[selectedSession.id] ? (
-                            <div className="flex flex-col items-center gap-4 bg-primary/5 p-6 rounded-3xl">
-                               <p className="font-black text-primary uppercase text-sm">{language === 'ar' ? 'نتيجتك النهائية' : 'Your Final Result'}</p>
-                               <div className="text-5xl font-black text-primary">
-                                  {quizResults[selectedSession.id].score} <span className="text-xl opacity-30">/ {quizResults[selectedSession.id].totalQuestions}</span>
-                               </div>
-                               {!feedbacks[selectedSession.id] && (
-                                 <button 
-                                   onClick={() => navigate(`/sessions/${selectedSession.id}/feedback`)}
-                                   className="w-full bg-error text-white py-4 rounded-2xl font-black text-center"
-                                 >
-                                   {language === 'ar' ? 'قيم الجلسة الآن' : 'Rate Session Now'}
-                                 </button>
-                               )}
-                            </div>
-                          ) : (
-                            <button 
-                              onClick={() => navigate(`/sessions/${selectedSession.id}/quiz`)}
-                              className="w-full bg-primary text-white py-6 rounded-3xl font-black text-xl uppercase tracking-widest hive-shadow hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3"
-                            >
-                              <ClipboardCheck size={24} />
-                              {language === 'ar' ? 'ابدأ الاختبار' : 'Start Assessment'}
-                            </button>
-                          )
-                        ) : null
-                      ) : isSessionUpcoming(selectedSession) ? (
-                        <div className="bg-surface-container-high p-8 rounded-3xl text-center space-y-2">
-                          <p className="font-black text-on-surface-variant uppercase tracking-widest">{language === 'ar' ? 'هذه الجلسة قريباً' : 'This session starts soon'}</p>
-                          <p className="text-sm font-medium text-on-surface-variant/60">{language === 'ar' ? 'يرجى العودة في الموعد المحدد للتمكن من الانضمام.' : 'Please return at the scheduled time to join.'}</p>
-                        </div>
-                      ) : selectedSession.link ? (
-                        <a 
-                          href={selectedSession.link} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="w-full bg-primary text-white py-6 rounded-3xl font-black text-xl uppercase tracking-widest hive-shadow text-center block hover:brightness-110 active:scale-95 transition-all"
-                        >
-                          {selectedSession.type === 'live' ? (language === 'ar' ? 'انضم الآن' : 'Join Now') : (language === 'ar' ? 'مشاهدة الآن' : 'Watch Now')}
-                        </a>
-                      ) : null}
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            )}
-          </AnimatePresence>
 
           {sessions.length === 0 && (
             <div className="py-32 text-center bg-surface-container-low rounded-[40px] border-2 border-dashed border-outline-variant/30">
