@@ -29,9 +29,22 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
+      // Check if email is allowed
+      const adminEmail = 'omarwork1011@gmail.com';
+      const cleanEmail = formData.email.trim().toLowerCase();
+      
+      if (cleanEmail !== adminEmail) {
+        const allowDoc = await getDoc(doc(db, 'allowed_emails', cleanEmail));
+        if (!allowDoc.exists()) {
+          toast.error(language === 'ar' ? 'هذا البريد الإلكتروني غير مسموح له بالتسجيل.' : 'This email is not permitted to register.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const { user } = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       
-      const role = formData.email === 'omarwork1011@gmail.com' ? 'admin' : 'applicant';
+      const role = formData.email === adminEmail ? 'admin' : 'applicant';
 
       const path = `users/${user.uid}`;
       try {
@@ -80,7 +93,20 @@ export default function Register() {
       }
 
       if (!userDoc.exists()) {
-        const role = user.email === 'omarwork1011@gmail.com' ? 'admin' : 'applicant';
+        // Check if allowed for new users
+        const adminEmail = 'omarwork1011@gmail.com';
+        const cleanEmail = user.email!.toLowerCase();
+
+        if (cleanEmail !== adminEmail) {
+          const allowDoc = await getDoc(doc(db, 'allowed_emails', cleanEmail));
+          if (!allowDoc.exists()) {
+            await auth.signOut();
+            toast.error(language === 'ar' ? 'هذا البريد الإلكتروني غير مسموح له بالتسجيل.' : 'This email is not permitted to register.');
+            return;
+          }
+        }
+
+        const role = user.email === adminEmail ? 'admin' : 'applicant';
         try {
           await setDoc(doc(db, 'users', user.uid), {
             uid: user.uid,

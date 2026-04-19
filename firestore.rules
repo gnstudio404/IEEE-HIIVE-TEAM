@@ -207,5 +207,11 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isValidFeedback(request.resource.data);
       allow update, delete: if isAdmin();
     }
+
+    match /allowed_emails/{email} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+    }
   }
 }

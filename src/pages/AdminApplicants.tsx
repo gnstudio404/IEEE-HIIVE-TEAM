@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, ChangeEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
-import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download, Ban, UserCog, UserMinus, RotateCcw, X } from 'lucide-react';
+import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download, Ban, UserCog, UserMinus, RotateCcw, X, Upload } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
 import * as XLSX from 'xlsx';
@@ -22,6 +22,55 @@ export default function AdminApplicants() {
   const [blockingId, setBlockingId] = useState<string | null>(null);
   const [roleLoadingId, setRoleLoadingId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [uploadingAllowlist, setUploadingAllowlist] = useState(false);
+
+  const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const handleAllowlistUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingAllowlist(true);
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+        const emails = data
+          .map(row => {
+            const emailKey = Object.keys(row).find(k => k.toLowerCase() === 'email');
+            return emailKey ? row[emailKey]?.toString().trim().toLowerCase() : null;
+          })
+          .filter(email => email && isValidEmail(email));
+
+        if (emails.length === 0) {
+          toast.error(language === 'ar' ? 'لم يتم العثور على إيميلات صالحة في الملف' : 'No valid emails found in file');
+          return;
+        }
+
+        const batch = writeBatch(db);
+        emails.forEach(email => {
+          batch.set(doc(db, 'allowed_emails', email), {
+            email,
+            addedAt: new Date().toISOString()
+          });
+        });
+
+        await batch.commit();
+        toast.success(language === 'ar' ? `تم إضافة ${emails.length} إيميل للقائمة المسموحة!` : `Added ${emails.length} emails to allowlist!`);
+      } catch (error) {
+        console.error("Error uploading allowlist:", error);
+        toast.error(language === 'ar' ? 'فشل حتي رفع القائمة' : 'Failed to upload allowlist');
+      } finally {
+        setUploadingAllowlist(false);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   const downloadExcel = () => {
     const data = filteredApplicants.map(u => {
@@ -279,6 +328,14 @@ export default function AdminApplicants() {
             <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.applicants')}</h2>
           </div>
           <div className="flex gap-4">
+            <label className={cn(
+              "flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-secondary/20 cursor-pointer",
+              uploadingAllowlist && "opacity-50 cursor-wait"
+            )}>
+              {uploadingAllowlist ? <RotateCcw size={18} className="animate-spin" /> : <Upload size={18} />}
+              {language === 'ar' ? 'رفع قائمة المسموح لهم' : 'Upload Allowlist'}
+              <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleAllowlistUpload} disabled={uploadingAllowlist} />
+            </label>
             <button 
               onClick={downloadExcel}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"

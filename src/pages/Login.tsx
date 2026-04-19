@@ -68,7 +68,21 @@ export default function Login() {
       }
 
       if (!userDoc.exists()) {
-        const role = user.email === 'omarwork1011@gmail.com' ? 'admin' : 'applicant';
+        // Check if allowed for new users
+        const adminEmail = 'omarwork1011@gmail.com';
+        const cleanEmail = user.email!.toLowerCase();
+
+        if (cleanEmail !== adminEmail) {
+          const allowDoc = await getDoc(doc(db, 'allowed_emails', cleanEmail));
+          if (!allowDoc.exists()) {
+            await auth.signOut();
+            toast.error(language === 'ar' ? 'هذا البريد الإلكتروني غير مسموح له بالتسجيل.' : 'This email is not permitted to register.');
+            setGoogleLoading(false);
+            return;
+          }
+        }
+
+        const role = user.email === adminEmail ? 'admin' : 'applicant';
         try {
           await setDoc(doc(db, 'users', user.uid), {
             uid: user.uid,

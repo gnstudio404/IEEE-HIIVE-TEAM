@@ -158,6 +158,16 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["sessionId", "userId", "overallRating", "topicRating", "instructorRating", "benefitRating", "createdAt"]
+    },
+    "AllowedEmail": {
+      "title": "AllowedEmail",
+      "description": "Email address permitted to register in the system",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email"]
     }
   },
   "firestore": {
@@ -170,6 +180,7 @@
     "/sessions/{sessionId}": { "schema": "Session", "description": "Educational sessions" },
     "/sessionQuestions/{questionId}": { "schema": "SessionQuestion", "description": "Questions for session quizzes" },
     "/sessionQuizResults/{resultId}": { "schema": "SessionQuizResult", "description": "User quiz attempts" },
-    "/sessionFeedbacks/{feedbackId}": { "schema": "SessionFeedback", "description": "Session ratings and feedback" }
+    "/sessionFeedbacks/{feedbackId}": { "schema": "SessionFeedback", "description": "Session ratings and feedback" },
+    "/allowed_emails/{emailId}": { "schema": "AllowedEmail", "description": "List of emails permitted to register" }
   }
 }
