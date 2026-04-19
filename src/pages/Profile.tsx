@@ -133,19 +133,25 @@ export default function Profile() {
               <div className="mt-4 p-5 bg-secondary/5 rounded-2xl border border-secondary/10 text-left">
                 <h3 className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
-                  {language === 'ar' ? 'إحصائيات الحضور' : 'Attendance Stats'}
+                  {language === 'ar' ? 'إحصائيات الحضور والغياب' : 'Attendance & Absence Stats'}
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-surface-container-lowest p-3 rounded-xl border border-secondary/10">
-                    <p className="text-2xl font-black text-secondary leading-none">{profile?.attendancePercentage}%</p>
-                    <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
-                      {language === 'ar' ? 'نسبة الحضور' : 'Attendance Rate'}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-surface-container-lowest p-3 rounded-xl border border-secondary/10 text-center">
+                    <p className="text-xl font-black text-secondary leading-none">{profile?.attendancePercentage}%</p>
+                    <p className="text-[8px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
+                      {language === 'ar' ? 'النسبة' : 'Rate'}
                     </p>
                   </div>
-                  <div className="bg-surface-container-lowest p-3 rounded-xl border border-secondary/10">
-                    <p className="text-2xl font-black text-secondary leading-none">{profile?.attendedSessionsCount}</p>
-                    <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
-                      {language === 'ar' ? 'جلسات محضورة' : 'Sessions'}
+                  <div className="bg-surface-container-lowest p-3 rounded-xl border border-secondary/10 text-center">
+                    <p className="text-xl font-black text-primary leading-none">{profile?.attendedSessionsCount || 0}</p>
+                    <p className="text-[8px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
+                      {language === 'ar' ? 'حضور' : 'Attended'}
+                    </p>
+                  </div>
+                  <div className="bg-surface-container-lowest p-3 rounded-xl border border-secondary/10 text-center">
+                    <p className="text-xl font-black text-error leading-none">{profile?.absentSessionsCount || 0}</p>
+                    <p className="text-[8px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
+                      {language === 'ar' ? 'غياب' : 'Absent'}
                     </p>
                   </div>
                 </div>

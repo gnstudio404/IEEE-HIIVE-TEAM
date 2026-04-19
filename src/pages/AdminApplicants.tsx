@@ -502,6 +502,25 @@ export default function AdminApplicants() {
               <div className="grid grid-cols-2 gap-6 mt-8">
                 <div className="space-y-1">
                   <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
+                    {language === 'ar' ? 'حضور' : 'Attended'}
+                  </p>
+                  <p className="font-bold text-primary flex items-center gap-2 text-sm">
+                    <CheckCircle2 size={12} className="text-emerald-500" />
+                    {selectedUser.attendedSessionsCount ?? 0}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
+                    {language === 'ar' ? 'غياب' : 'Absent'}
+                  </p>
+                  <p className="font-bold text-error flex items-center gap-2 text-sm">
+                    <Clock size={12} />
+                    {selectedUser.absentSessionsCount ?? 0}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black text-on-surface-variant/50 uppercase tracking-widest">
                     {t('register.phone')}
                   </p>
                   <p className="font-bold text-primary flex items-center gap-2">

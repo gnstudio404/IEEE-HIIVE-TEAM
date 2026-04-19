@@ -15,6 +15,7 @@ export interface UserProfile {
   assignedTeamId?: string | null;
   attendancePercentage?: number;
   attendedSessionsCount?: number;
+  absentSessionsCount?: number;
   createdAt: string;
 }
 
