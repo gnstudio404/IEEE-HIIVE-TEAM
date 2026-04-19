@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, writeBatch, doc, getDocsFromServer } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { UserProfile, UserScore, Team } from '../types';
-import { Users, CheckCircle2, Clock, Trophy, TrendingUp, BarChart3 } from 'lucide-react';
+import { Users, CheckCircle2, Clock, Trophy, TrendingUp, BarChart3, RotateCcw, Trash2, Download, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
+import { toast } from 'sonner';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -22,113 +23,212 @@ export default function AdminDashboard() {
   const [topLeaders, setTopLeaders] = useState<any[]>([]);
   const [highRiskUsers, setHighRiskUsers] = useState<any[]>([]);
   const [balancedUsers, setBalancedUsers] = useState<any[]>([]);
+  const [isResetting, setIsResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const fetchStats = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      // Use getDocsFromServer to ensure we avoid stale data
+      let usersSnap;
+      try {
+        usersSnap = await getDocsFromServer(collection(db, 'users'));
+      } catch (error) {
+        // Fallback to cache if offline
+        usersSnap = await getDocs(collection(db, 'users'));
+      }
+      
+      const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+      const applicants = users.filter(u => u.role === 'applicant');
+      
+      let teamsSnap;
+      try {
+        teamsSnap = await getDocsFromServer(collection(db, 'teams'));
+      } catch (error) {
+        teamsSnap = await getDocs(collection(db, 'teams'));
+      }
+
+      let scoresSnap;
+      try {
+        scoresSnap = await getDocsFromServer(collection(db, 'scores'));
+      } catch (error) {
+        scoresSnap = await getDocs(collection(db, 'scores'));
+      }
+
+      const scores = scoresSnap.docs.map(doc => doc.data() as UserScore);
+      
+      // Filter scores to only include current active applicants
+      const applicantScores = scores.filter(s => {
+        const u = users.find(user => user.uid === s.userId);
+        return u && u.role === 'applicant';
+      });
+
+      // Calculate Top Leaders
+      const sortedLeaders = [...applicantScores]
+        .sort((a, b) => b.leaderScore - a.leaderScore)
+        .slice(0, 5)
+        .map(s => ({
+          ...s,
+          name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
+        }));
+      setTopLeaders(sortedLeaders);
+
+      // Calculate High Risk (Neuroticism > 4.0)
+      const highRisk = applicantScores.filter(s => s.traits.N > 4.0).map(s => ({
+        ...s,
+        name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
+      }));
+      setHighRiskUsers(highRisk);
+
+      // Calculate Balanced Users (All traits between 2.5 and 3.5)
+      const balanced = applicantScores.filter(s => 
+        Object.values(s.traits).every(v => (v as number) >= 2.5 && (v as number) <= 3.5)
+      ).map(s => ({
+        ...s,
+        name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
+      }));
+      setBalancedUsers(balanced);
+
+      const distribution: Record<string, number> = {
+        O: 0,
+        C: 0,
+        E: 0,
+        A: 0,
+        N: 0
+      };
+
+      const traitLabels: Record<string, string> = {
+        O: language === 'ar' ? 'الانفتاح' : 'Openness',
+        C: language === 'ar' ? 'الضمير' : 'Conscientiousness',
+        E: language === 'ar' ? 'الانبساط' : 'Extraversion',
+        A: language === 'ar' ? 'الوفاق' : 'Agreeableness',
+        N: language === 'ar' ? 'العصابية' : 'Neuroticism'
+      };
+
+      applicantScores.forEach(score => {
+        if (score.primaryTrait && distribution[score.primaryTrait] !== undefined) {
+          distribution[score.primaryTrait]++;
+        }
+      });
+
+      const chartData = Object.entries(distribution).map(([key, value]) => ({
+        name: traitLabels[key],
+        value
+      }));
+
+      setTraitDistribution(chartData);
+      
+      setStats({
+        totalApplicants: applicants.length,
+        completedTests: applicants.filter(u => u.completedTest).length,
+        pendingUsers: applicants.filter(u => !u.completedTest).length,
+        totalTeams: teamsSnap.size
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+      toast.error(language === 'ar' ? "فشل تحديث الإحصائيات" : "Failed to refresh statistics");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchStats = async () => {
-      if (!user) return;
-      try {
-        let usersSnap;
-        try {
-          usersSnap = await getDocs(collection(db, 'users'));
-        } catch (error) {
-          handleFirestoreError(error, OperationType.LIST, 'users');
-          return;
-        }
-        const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-        const applicants = users.filter(u => u.role === 'applicant');
-        
-        let teamsSnap;
-        try {
-          teamsSnap = await getDocs(collection(db, 'teams'));
-        } catch (error) {
-          handleFirestoreError(error, OperationType.LIST, 'teams');
-          return;
-        }
-
-        let scoresSnap;
-        try {
-          scoresSnap = await getDocs(collection(db, 'scores'));
-        } catch (error) {
-          handleFirestoreError(error, OperationType.LIST, 'scores');
-          return;
-        }
-
-        const scores = scoresSnap.docs.map(doc => doc.data() as UserScore);
-        const scoresMap = scores.reduce((acc, s) => ({ ...acc, [s.userId]: s }), {} as Record<string, UserScore>);
-
-        // Calculate Top Leaders
-        const sortedLeaders = [...scores]
-          .sort((a, b) => b.leaderScore - a.leaderScore)
-          .slice(0, 5)
-          .map(s => ({
-            ...s,
-            name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
-          }));
-        setTopLeaders(sortedLeaders);
-
-        // Calculate High Risk (Neuroticism > 4.0)
-        const highRisk = scores.filter(s => s.traits.N > 4.0).map(s => ({
-          ...s,
-          name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
-        }));
-        setHighRiskUsers(highRisk);
-
-        // Calculate Balanced Users (All traits between 2.5 and 3.5)
-        const balanced = scores.filter(s => 
-          Object.values(s.traits).every(v => (v as number) >= 2.5 && (v as number) <= 3.5)
-        ).map(s => ({
-          ...s,
-          name: users.find(u => u.uid === s.userId)?.name || 'Unknown'
-        }));
-        setBalancedUsers(balanced);
-
-        const distribution: Record<string, number> = {
-          O: 0,
-          C: 0,
-          E: 0,
-          A: 0,
-          N: 0
-        };
-
-        const traitLabels: Record<string, string> = {
-          O: language === 'ar' ? 'الانفتاح' : 'Openness',
-          C: language === 'ar' ? 'الضمير' : 'Conscientiousness',
-          E: language === 'ar' ? 'الانبساط' : 'Extraversion',
-          A: language === 'ar' ? 'الوفاق' : 'Agreeableness',
-          N: language === 'ar' ? 'العصابية' : 'Neuroticism'
-        };
-
-        scores.forEach(score => {
-          if (score.primaryTrait && distribution[score.primaryTrait] !== undefined) {
-            distribution[score.primaryTrait]++;
-          }
-        });
-
-        const chartData = Object.entries(distribution).map(([key, value]) => ({
-          name: traitLabels[key],
-          value
-        }));
-
-        setTraitDistribution(chartData);
-        
-        setStats({
-          totalApplicants: applicants.length,
-          completedTests: applicants.filter(u => u.completedTest).length,
-          pendingUsers: applicants.filter(u => !u.completedTest).length,
-          totalTeams: teamsSnap.size
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchStats();
   }, [user]);
 
+  const handleResetSystem = async () => {
+    setIsResetting(true);
+    setShowResetConfirm(false);
+    try {
+      // 1. Reset student progress in users collection
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const applicants = usersSnap.docs.filter(d => d.data().role === 'applicant');
+      
+      // Update users in smaller chunks to avoid batch limits
+      function chunk<T>(arr: T[], size: number): T[][] {
+        return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+          arr.slice(i * size, i * size + size)
+        );
+      }
+
+      for (const studentChunk of chunk(applicants, 100)) {
+        const batch = writeBatch(db);
+        studentChunk.forEach(student => {
+          batch.update(doc(db, 'users', student.id), {
+            completedTest: false,
+            assignedTeamId: null,
+            attendedSessionsCount: 0,
+            absentSessionsCount: 0,
+            isBlocked: false
+          });
+        });
+        await batch.commit();
+      }
+
+      // 2. Clear bulk collections (Performance data)
+      const bulkCols = ['scores', 'responses', 'sessionQuizResults', 'sessionFeedbacks', 'assignments'];
+      for (const col of bulkCols) {
+        const snap = await getDocs(collection(db, col));
+        for (const docChunk of chunk(snap.docs, 100)) {
+          const batch = writeBatch(db);
+          docChunk.forEach(d => batch.delete(doc(db, col, d.id)));
+          await batch.commit();
+        }
+      }
+
+      // 3. Reset team counts
+      const teamsSnap = await getDocs(collection(db, 'teams'));
+      const teamsBatch = writeBatch(db);
+      teamsSnap.docs.forEach(d => teamsBatch.update(doc(db, 'teams', d.id), { memberCount: 0 }));
+      await teamsBatch.commit();
+
+      await fetchStats();
+      toast.success(language === 'ar' ? "تم تصفير تقدم الطلاب بنجاح مع الاحتفاظ بحساباتهم" : "Scores reset successfully, student accounts preserved");
+    } catch (error) {
+      console.error("Error resetting system:", error);
+      toast.error(language === 'ar' ? "فشل تصفير النظام" : "Failed to reset system");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="space-y-12">
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface-container-lowest rounded-3xl p-8 max-w-md w-full shadow-2xl border border-outline-variant/20 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-error/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <Trash2 className="text-error" size={32} />
+            </div>
+            <h3 className="text-2xl font-black text-primary text-center mb-4 tracking-tight">
+              {language === 'ar' ? 'تصفير كافة البيانات؟' : 'Reset All Data?'}
+            </h3>
+            <p className="text-on-surface-variant text-center mb-8 leading-relaxed font-medium">
+              {language === 'ar' 
+                ? 'هل أنت متأكد من مسح جميع نتائج الاختبارات؟ سيتم الاحتفاظ بحسابات الطلاب ولكن سيتم تصفير تقدمهم ونتائجهم بالكامل.' 
+                : 'Are you sure you want to reset all test results? Student accounts will be kept but their progress and scores will be permanently cleared.'}
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="flex-1 py-4 bg-surface-container-high text-on-surface font-bold rounded-2xl hover:bg-surface-container-highest transition-colors uppercase tracking-widest text-[10px]"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleResetSystem}
+                className="flex-[2] py-4 bg-error text-white font-bold rounded-2xl shadow-lg shadow-error/30 hover:opacity-90 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} />
+                {language === 'ar' ? 'تصفير الآن' : 'Reset Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Section: Dashboard Overview (Bento Grid) */}
       <section id="dashboard">
         <div className="flex justify-between items-end mb-8">
@@ -136,10 +236,20 @@ export default function AdminDashboard() {
             <p className="text-primary font-bold tracking-tight text-sm mb-1 uppercase">{t('admin.analytics')}</p>
             <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.systemPerformance')}</h2>
           </div>
-          <button className="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20">
-            <span className="material-symbols-outlined text-sm">download</span>
-            {t('admin.export')}
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={() => setShowResetConfirm(true)}
+              disabled={isResetting}
+              className="bg-error text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-error/20"
+            >
+              {isResetting ? <RotateCcw size={18} className="animate-spin" /> : <Trash2 size={18} />}
+              {language === 'ar' ? 'تصفير كافة البيانات' : 'Reset All Data'}
+            </button>
+            <button className="bg-primary text-on-primary px-6 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-primary/20">
+              <Download size={18} />
+              {t('admin.export')}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-12 gap-6">

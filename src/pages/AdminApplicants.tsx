@@ -1,6 +1,6 @@
 import React, { useState, useEffect, ChangeEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, writeBatch, query, where, deleteField } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
@@ -26,6 +26,7 @@ export default function AdminApplicants() {
   const [isManualAddModalOpen, setIsManualAddModalOpen] = useState(false);
   const [manualEmail, setManualEmail] = useState('');
   const [isAddingManual, setIsAddingManual] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -306,16 +307,25 @@ export default function AdminApplicants() {
     }
 
     try {
+      setDeletingId(userId);
       const user = applicants.find(u => u.uid === userId);
       const batch = writeBatch(db);
 
-      // Delete user document
+      // 1. Delete associated data in other collections
+      const collectionsToClean = ['responses', 'sessionQuizResults', 'sessionFeedbacks', 'assignments'];
+      for (const colName of collectionsToClean) {
+        const q = query(collection(db, colName), where('userId', '==', userId));
+        const snap = await getDocs(q);
+        snap.docs.forEach(d => batch.delete(doc(db, colName, d.id)));
+      }
+
+      // 2. Delete user document
       batch.delete(doc(db, 'users', userId));
 
-      // Delete score document
+      // 3. Delete score document
       batch.delete(doc(db, 'scores', userId));
 
-      // Update team count if assigned
+      // 4. Update team count if assigned
       if (user?.assignedTeamId) {
         const team = teams.find(t => t.id === user.assignedTeamId);
         if (team) {
@@ -331,13 +341,70 @@ export default function AdminApplicants() {
         handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
         return;
       }
-      toast.success("User data deleted successfully");
+      toast.success(language === 'ar' ? "تم مسح بيانات المستخدم بالكامل" : "User data deleted successfully");
       setDeletingId(null);
       fetchData();
     } catch (error: any) {
       console.error("Error deleting user:", error);
       const errorMessage = error?.message || "Failed to delete user";
       toast.error(`Delete failed: ${errorMessage}`);
+      setDeletingId(null);
+    }
+  };
+
+  const handleResetSystem = async () => {
+    setLoading(true);
+    setIsResetConfirmOpen(false);
+    try {
+      // Helper to chunk arrays
+      function chunk<T>(arr: T[], size: number): T[][] {
+        return Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+          arr.slice(i * size, i * size + size)
+        );
+      }
+
+      // 1. Reset student progress in users collection
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const applicantsToReset = usersSnap.docs.filter(d => d.data().role === 'applicant');
+      
+      for (const studentChunk of chunk(applicantsToReset, 100)) {
+        const batch = writeBatch(db);
+        studentChunk.forEach(student => {
+          batch.update(doc(db, 'users', student.id), {
+            completedTest: false,
+            assignedTeamId: null,
+            attendedSessionsCount: 0,
+            absentSessionsCount: 0,
+            isBlocked: false
+          });
+        });
+        await batch.commit();
+      }
+
+      // 2. Clear bulk collections (Performance data)
+      const bulkCols = ['scores', 'responses', 'sessionQuizResults', 'sessionFeedbacks', 'assignments'];
+      for (const col of bulkCols) {
+        const snap = await getDocs(collection(db, col));
+        for (const docChunk of chunk(snap.docs, 100)) {
+          const batch = writeBatch(db);
+          docChunk.forEach(d => batch.delete(doc(db, col, d.id)));
+          await batch.commit();
+        }
+      }
+
+      // 3. Reset team counts
+      const teamsSnap = await getDocs(collection(db, 'teams'));
+      const teamsBatch = writeBatch(db);
+      teamsSnap.docs.forEach(d => teamsBatch.update(doc(db, 'teams', d.id), { memberCount: 0 }));
+      await teamsBatch.commit();
+
+      toast.success(language === 'ar' ? "تم تصفير تقدم الطلاب بنجاح مع الاحتفاظ بحساباتهم" : "Scores reset successfully, student accounts preserved");
+      fetchData();
+    } catch (error) {
+      console.error("Error resetting system:", error);
+      toast.error(language === 'ar' ? "فشل تصفير النظام" : "Failed to reset system");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -381,6 +448,13 @@ export default function AdminApplicants() {
             >
               <Download size={18} />
               {language === 'ar' ? 'تحميل البيانات' : 'Download Data'}
+            </button>
+            <button 
+              onClick={() => setIsResetConfirmOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-error text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-error/20"
+            >
+              <RotateCcw size={18} />
+              {language === 'ar' ? 'تصفير النظام' : 'Reset System'}
             </button>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-sm">search</span>
@@ -712,6 +786,40 @@ export default function AdminApplicants() {
       )}
 
       {/* Manual Email Modal */}
+      {/* Reset Confirmation Modal */}
+      {isResetConfirmOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface-container-lowest rounded-3xl p-8 max-w-md w-full shadow-2xl border border-outline-variant/20 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-error/10 rounded-2xl flex items-center justify-center mb-6 mx-auto">
+              <RotateCcw className="text-error" size={32} />
+            </div>
+            <h3 className="text-2xl font-black text-primary text-center mb-4 tracking-tight">
+              {language === 'ar' ? 'تصفير كافة البيانات؟' : 'Reset All Data?'}
+            </h3>
+            <p className="text-on-surface-variant text-center mb-8 leading-relaxed font-medium">
+              {language === 'ar' 
+                ? 'هل أنت متأكد من مسح جميع نتائج الاختبارات؟ سيتم الاحتفاظ بحسابات الطلاب ولكن سيتم تصفير تقدمهم ونتائجهم بالكامل.' 
+                : 'Are you sure you want to reset all test results? Student accounts will be kept but their progress and scores will be permanently cleared.'}
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setIsResetConfirmOpen(false)}
+                className="flex-1 py-4 bg-surface-container-high text-on-surface font-bold rounded-2xl hover:bg-surface-container-highest transition-colors uppercase tracking-widest text-[10px]"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleResetSystem}
+                className="flex-[2] py-4 bg-error text-white font-bold rounded-2xl shadow-lg shadow-error/30 hover:opacity-90 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+              >
+                <RotateCcw size={16} />
+                {language === 'ar' ? 'تصفير الآن' : 'Reset Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isManualAddModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div 
