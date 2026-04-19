@@ -4,7 +4,7 @@ import { collection, getDocs, doc, updateDoc, writeBatch } from 'firebase/firest
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
-import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download, Ban, UserCog, UserMinus, RotateCcw, X, Upload } from 'lucide-react';
+import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download, Ban, UserCog, UserMinus, RotateCcw, X, Upload, Plus } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
 import * as XLSX from 'xlsx';
@@ -23,8 +23,40 @@ export default function AdminApplicants() {
   const [roleLoadingId, setRoleLoadingId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [uploadingAllowlist, setUploadingAllowlist] = useState(false);
+  const [isManualAddModalOpen, setIsManualAddModalOpen] = useState(false);
+  const [manualEmail, setManualEmail] = useState('');
+  const [isAddingManual, setIsAddingManual] = useState(false);
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  const handleAddManualEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = manualEmail.trim().toLowerCase();
+
+    if (!isValidEmail(cleanEmail)) {
+      toast.error(language === 'ar' ? 'يرجى إدخال بريد إلكتروني صحيح' : 'Please enter a valid email');
+      return;
+    }
+
+    setIsAddingManual(true);
+    try {
+      const { setDoc } = await import('firebase/firestore');
+      await setDoc(doc(db, 'allowed_emails', cleanEmail), {
+        email: cleanEmail,
+        addedAt: new Date().toISOString(),
+        addedManually: true
+      });
+
+      toast.success(language === 'ar' ? 'تم إضافة الإيميل بنجاح!' : 'Email added successfully!');
+      setManualEmail('');
+      setIsManualAddModalOpen(false);
+    } catch (error) {
+      console.error("Error adding email manually:", error);
+      toast.error(language === 'ar' ? 'فشل إضافة الإيميل' : 'Failed to add email');
+    } finally {
+      setIsAddingManual(false);
+    }
+  };
 
   const handleAllowlistUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -333,9 +365,16 @@ export default function AdminApplicants() {
               uploadingAllowlist && "opacity-50 cursor-wait"
             )}>
               {uploadingAllowlist ? <RotateCcw size={18} className="animate-spin" /> : <Upload size={18} />}
-              {language === 'ar' ? 'رفع قائمة المسموح لهم' : 'Upload Allowlist'}
+              {language === 'ar' ? 'رفع ملف' : 'Upload File'}
               <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleAllowlistUpload} disabled={uploadingAllowlist} />
             </label>
+            <button 
+              onClick={() => setIsManualAddModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-tertiary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-tertiary/20"
+            >
+              <Plus size={18} />
+              {language === 'ar' ? 'إضافة يدوي' : 'Add Manually'}
+            </button>
             <button 
               onClick={downloadExcel}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
@@ -667,6 +706,77 @@ export default function AdminApplicants() {
                   {language === 'ar' ? 'إغلاق' : 'Close'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Email Modal */}
+      {isManualAddModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm"
+            onClick={() => setIsManualAddModalOpen(false)}
+          />
+          <div className="relative w-full max-w-md bg-surface-container-lowest rounded-3xl shadow-2xl overflow-hidden border border-outline-variant/30 animate-in fade-in zoom-in duration-300">
+            <div className="p-8">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-2xl font-black text-primary tracking-tighter">
+                    {language === 'ar' ? 'إضافة إيميل يدوي' : 'Add Email Manually'}
+                  </h3>
+                  <p className="text-sm text-on-surface-variant font-medium mt-1">
+                    {language === 'ar' ? 'أضف بريداً إلكترونياً مسموحاً له بالتسجيل' : 'Add an email permitted to register'}
+                  </p>
+                </div>
+                <button 
+                  onClick={() => setIsManualAddModalOpen(false)}
+                  className="p-2 hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant/50"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddManualEmail} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-primary/50 uppercase tracking-widest pl-1">
+                    {language === 'ar' ? 'البريد الإلكتروني' : 'Email Address'}
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40" size={18} />
+                    <input
+                      type="email"
+                      value={manualEmail}
+                      onChange={(e) => setManualEmail(e.target.value)}
+                      placeholder="example@domain.com"
+                      required
+                      className="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary transition-all placeholder:text-on-surface-variant/30"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsManualAddModalOpen(false)}
+                    className="flex-1 py-4 bg-surface-container-high text-on-surface font-bold rounded-2xl hover:bg-surface-container-highest transition-colors uppercase tracking-widest text-[10px]"
+                  >
+                    {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isAddingManual}
+                    className="flex-[2] py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/30 hover:opacity-90 transition-all uppercase tracking-widest text-[10px] flex items-center justify-center gap-2"
+                  >
+                    {isAddingManual ? (
+                      <RotateCcw className="animate-spin" size={16} />
+                    ) : (
+                      <Plus size={16} />
+                    )}
+                    {language === 'ar' ? 'إضافة الآن' : 'Add Now'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
