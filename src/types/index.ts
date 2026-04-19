@@ -13,6 +13,8 @@ export interface UserProfile {
   completedTest: boolean;
   isBlocked?: boolean;
   assignedTeamId?: string | null;
+  attendancePercentage?: number;
+  attendedSessionsCount?: number;
   createdAt: string;
 }
 

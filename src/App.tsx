@@ -18,6 +18,7 @@ import AdminTeams from './pages/AdminTeams';
 import AdminApplicants from './pages/AdminApplicants';
 import AdminTeamDetails from './pages/AdminTeamDetails';
 import AdminSessions from './pages/AdminSessions';
+import AdminAttendance from './pages/AdminAttendance';
 import AdminSessionQuiz from './pages/AdminSessionQuiz';
 import SessionsList from './pages/SessionsList';
 import SessionQuiz from './pages/SessionQuiz';
@@ -62,6 +63,7 @@ function AppRoutes() {
         <Route path="admin/teams/:teamId" element={<ProtectedRoute adminOnly><AdminTeamDetails /></ProtectedRoute>} />
         <Route path="admin/applicants" element={<ProtectedRoute adminOnly><AdminApplicants /></ProtectedRoute>} />
         <Route path="admin/sessions" element={<ProtectedRoute adminOnly><AdminSessions /></ProtectedRoute>} />
+        <Route path="admin/attendance" element={<ProtectedRoute adminOnly><AdminAttendance /></ProtectedRoute>} />
         <Route path="admin/sessions/:sessionId/quiz" element={<ProtectedRoute adminOnly><AdminSessionQuiz /></ProtectedRoute>} />
       </Route>
     </Routes>

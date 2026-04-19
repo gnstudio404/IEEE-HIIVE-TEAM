@@ -128,6 +128,29 @@ export default function Profile() {
                 </div>
               </div>
             )}
+
+            {(profile?.attendancePercentage !== undefined || profile?.attendedSessionsCount !== undefined) && (
+              <div className="mt-4 p-5 bg-secondary/5 rounded-2xl border border-secondary/10 text-left">
+                <h3 className="text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse" />
+                  {language === 'ar' ? 'إحصائيات الحضور' : 'Attendance Stats'}
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-surface-container-lowest p-3 rounded-xl border border-secondary/10">
+                    <p className="text-2xl font-black text-secondary leading-none">{profile?.attendancePercentage}%</p>
+                    <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
+                      {language === 'ar' ? 'نسبة الحضور' : 'Attendance Rate'}
+                    </p>
+                  </div>
+                  <div className="bg-surface-container-lowest p-3 rounded-xl border border-secondary/10">
+                    <p className="text-2xl font-black text-secondary leading-none">{profile?.attendedSessionsCount}</p>
+                    <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mt-1">
+                      {language === 'ar' ? 'جلسات محضورة' : 'Sessions'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             
             <div className="mt-8 pt-8 border-t border-outline-variant/10 space-y-4">
               <div className="flex items-center gap-3 text-sm text-on-surface-variant">

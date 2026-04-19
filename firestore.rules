@@ -78,7 +78,10 @@ service cloud.firestore {
              (!('photoURL' in data) || (data.photoURL == null || (data.photoURL is string && data.photoURL.size() < 1000))) &&
              (!('completedTest' in data) || data.completedTest is bool) &&
              (!('isBlocked' in data) || data.isBlocked is bool) &&
-             (!('assignedTeamId' in data) || (data.assignedTeamId == null || data.assignedTeamId is string));
+             (!('assignedTeamId' in data) || (data.assignedTeamId == null || data.assignedTeamId is string)) &&
+             (!('attendancePercentage' in data) || (data.attendancePercentage is number)) &&
+             (!('attendedSessionsCount' in data) || (data.attendedSessionsCount is number)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string));
     }
 
     function isValidQuestion(data) {

@@ -13,6 +13,8 @@
         "role": { "type": "string", "enum": ["applicant", "admin"] },
         "completedTest": { "type": "boolean" },
         "assignedTeamId": { "type": "string" },
+        "attendancePercentage": { "type": "number" },
+        "attendedSessionsCount": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "name", "email", "role"]

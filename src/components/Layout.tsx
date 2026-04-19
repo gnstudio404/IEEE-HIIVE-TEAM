@@ -30,6 +30,7 @@ export default function Layout() {
         { name: t('nav.questions'), path: '/admin/questions', icon: 'quiz' },
         { name: t('nav.teams'), path: '/admin/teams', icon: 'diversity_3' },
         { name: language === 'ar' ? 'السيشنات' : 'Sessions', path: '/admin/sessions', icon: 'video_library' },
+        { name: language === 'ar' ? 'الحضور والغياب' : 'Attendance', path: '/admin/attendance', icon: 'how_to_reg' },
       ]
     : [
         { name: t('nav.home'), path: '/', icon: 'dashboard' },
