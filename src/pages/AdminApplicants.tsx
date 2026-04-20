@@ -421,59 +421,66 @@ export default function AdminApplicants() {
   return (
     <div className="space-y-12">
       <section id="users">
-        <div className="flex justify-between items-end mb-8">
-          <div>
-            <p className="text-primary font-bold tracking-tight text-sm mb-1 uppercase">{t('admin.identityManagement')}</p>
-            <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.applicants')}</h2>
+        <div className="mb-8 space-y-6">
+          <div className="flex justify-between items-start">
+            <div>
+              <p className="text-primary font-bold tracking-tight text-sm mb-1 uppercase">{t('admin.identityManagement')}</p>
+              <h2 className="text-4xl font-extrabold text-primary tracking-tighter">{t('admin.applicants')}</h2>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-end max-w-2xl">
+              <label className={cn(
+                "flex items-center gap-2 px-5 py-2.5 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-secondary/20 cursor-pointer",
+                uploadingAllowlist && "opacity-50 cursor-wait"
+              )}>
+                {uploadingAllowlist ? <RotateCcw size={18} className="animate-spin" /> : <Upload size={18} />}
+                {language === 'ar' ? 'رفع ملف' : 'Upload File'}
+                <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleAllowlistUpload} disabled={uploadingAllowlist} />
+              </label>
+              <button 
+                onClick={() => setIsManualAddModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-tertiary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-tertiary/20"
+              >
+                <Plus size={18} />
+                {language === 'ar' ? 'إضافة يدوي' : 'Add Manually'}
+              </button>
+              <button 
+                onClick={downloadExcel}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
+              >
+                <Download size={18} />
+                {language === 'ar' ? 'تحميل البيانات' : 'Download Data'}
+              </button>
+              <button 
+                onClick={() => setIsResetConfirmOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-error text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-error/20"
+              >
+                <RotateCcw size={18} />
+                {language === 'ar' ? 'تصفير النظام' : 'Reset System'}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-4">
-            <label className={cn(
-              "flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-secondary/20 cursor-pointer",
-              uploadingAllowlist && "opacity-50 cursor-wait"
-            )}>
-              {uploadingAllowlist ? <RotateCcw size={18} className="animate-spin" /> : <Upload size={18} />}
-              {language === 'ar' ? 'رفع ملف' : 'Upload File'}
-              <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleAllowlistUpload} disabled={uploadingAllowlist} />
-            </label>
-            <button 
-              onClick={() => setIsManualAddModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-tertiary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-tertiary/20"
-            >
-              <Plus size={18} />
-              {language === 'ar' ? 'إضافة يدوي' : 'Add Manually'}
-            </button>
-            <button 
-              onClick={downloadExcel}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-primary/20"
-            >
-              <Download size={18} />
-              {language === 'ar' ? 'تحميل البيانات' : 'Download Data'}
-            </button>
-            <button 
-              onClick={() => setIsResetConfirmOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-error text-white rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-lg shadow-error/20"
-            >
-              <RotateCcw size={18} />
-              {language === 'ar' ? 'تصفير النظام' : 'Reset System'}
-            </button>
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50 text-sm">search</span>
+
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface-container-low/30 p-4 rounded-2xl border border-outline-variant/10">
+            <div className="relative w-full md:w-96">
+              <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/40 text-sm">search</span>
               <input 
-                className="pl-10 pr-4 py-2 bg-surface-container-low border-none rounded-xl text-sm focus:ring-1 focus:ring-primary w-64 transition-all" 
+                className="w-full pl-11 pr-4 py-3 bg-surface-container-low border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-on-surface-variant/30" 
                 placeholder={t('admin.search')} 
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex bg-surface-container-low p-1 rounded-xl">
+            <div className="flex bg-surface-container-lowest p-1.5 rounded-2xl border border-outline-variant/5 shadow-sm">
               {(['all', 'completed', 'pending', 'blocked'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
                   className={cn(
-                    "px-4 py-1.5 rounded-lg text-xs font-bold capitalize transition-all",
-                    filter === f ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-primary"
+                    "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all",
+                    filter === f 
+                      ? "bg-primary text-white shadow-md shadow-primary/20" 
+                      : "text-on-surface-variant/60 hover:text-primary hover:bg-surface-container-low"
                   )}
                 >
                   {f === 'blocked' ? (language === 'ar' ? 'المحظورين' : 'Blocked') : t(`admin.${f}`)}
