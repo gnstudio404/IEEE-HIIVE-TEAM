@@ -4,7 +4,7 @@ import { collection, getDocs, doc, updateDoc, writeBatch, query, where, deleteFi
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile, UserScore, Team } from '../types';
 import { toast } from 'sonner';
-import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download, Ban, UserCog, UserMinus, RotateCcw, X, Upload, Plus } from 'lucide-react';
+import { Search, Filter, User, Mail, Building, CheckCircle2, Clock, MoreVertical, ExternalLink, Trash2, AlertTriangle, Phone, Globe, Download, Ban, UserCog, UserMinus, RotateCcw, X, Upload, Plus, Shield } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLanguage } from '../context/LanguageContext';
 import * as XLSX from 'xlsx';
@@ -522,13 +522,31 @@ export default function AdminApplicants() {
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-primary group-hover:underline">{u.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-primary group-hover:underline">{u.name}</p>
+                            {u.role === 'admin' && (
+                              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-black rounded-md uppercase tracking-tighter border border-primary/20">
+                                <Shield size={10} className="fill-primary/20" />
+                                {language === 'ar' ? 'مسؤول' : 'Admin'}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-on-surface-variant">{u.email}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-5">
-                      {score ? (
+                      {u.role === 'admin' ? (
+                        <div className="flex flex-col">
+                          <span className="font-black text-primary text-sm tracking-tighter uppercase italic flex items-center gap-1">
+                            <Shield size={12} className="text-secondary" />
+                            {language === 'ar' ? 'مسؤول النظام' : 'System Admin'}
+                          </span>
+                          <span className="text-[10px] text-on-surface-variant/50 font-bold uppercase tracking-widest">
+                            {language === 'ar' ? 'صلاحيات كاملة' : 'Full Access'}
+                          </span>
+                        </div>
+                      ) : score ? (
                         <div className="flex flex-col">
                           <span className="font-black text-primary text-sm tracking-tighter">
                             {score.personalityType === 'The Leader'
